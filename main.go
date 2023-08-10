@@ -30,9 +30,13 @@ func main() {
 
 	args := NormalizeArgs(os.Args[1:])
 
-	fs.Parse(args)
+	err := fs.Parse(args)
+	if err != nil {
+		fmt.Println("Error: fail to parse arguments, ", err)
+		os.Exit(1)
+	}
 
-	IllegalArgsChecker(A{lineCount, fileCount, byteSize, args})
+	IllegalArgsChecker(Args{lineCount, fileCount, byteSize, args})
 
 	nonFlagArgs := fs.Args()
 	if len(nonFlagArgs) <= 0 {
@@ -52,7 +56,14 @@ func main() {
 		fmt.Println("Error:", err)
 		return
 	}
-	defer file.Close()
+
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			fmt.Printf("Error closing the file: %v\n", err)
+			os.Exit(1)
+		}
+	}()
 
 	if lineCount > 0 {
 		SplitByLines(file, lineCount, prefixFileName, suffixLen)

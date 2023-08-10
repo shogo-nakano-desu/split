@@ -52,14 +52,16 @@ func GenerateStrings(length int, prefix string, counter int) []string {
 	return result
 }
 
-type A struct {
+// Args is a struct that represents the arguments passed to the program.
+type Args struct {
 	LineCount int
 	FileCount int
 	ByteSize  int
 	Args      []string
 }
 
-func IllegalArgsChecker(params A) {
+// IllegalArgsChecker is a function that checks if the arguments passed to the program are valid.
+func IllegalArgsChecker(params Args) {
 	lineSet := false
 	fileSet := false
 	byteSet := false

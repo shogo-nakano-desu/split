@@ -1,3 +1,4 @@
+// package main
 package main
 
 import (
@@ -13,9 +14,21 @@ func writeToFile(content string, baseFileName string, suffix string) {
 	outFile, err := os.Create(newFileName)
 	if err != nil {
 		fmt.Println("Error:", err)
-		return
+		os.Exit(1)
 	}
-	defer outFile.Close()
 
-	outFile.WriteString(content)
+	defer func() {
+		err := outFile.Close()
+		if err != nil {
+			fmt.Printf("Error closing the file: %v\n", err)
+			os.Exit(1)
+		}
+	}()
+
+	_, err = outFile.WriteString(content)
+	if err != nil {
+		fmt.Printf("Error writing to the file: %v\n", err)
+		os.Exit(1)
+	}
+
 }

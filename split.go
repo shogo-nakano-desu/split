@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// SplitByLines is a function that splits a file by the number of lines.
 func SplitByLines(file *os.File, lineCount int, baseFileName string, suffixLen int) {
 	scanner := bufio.NewScanner(file)
 	var buffer strings.Builder
@@ -33,6 +34,7 @@ func SplitByLines(file *os.File, lineCount int, baseFileName string, suffixLen i
 	}
 }
 
+// SplitByFileCounts is a function that splits a file to the number of files.
 func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffixLen int) {
 	fileInfo, err := file.Stat()
 	if err != nil {
@@ -62,6 +64,7 @@ func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffix
 	}
 }
 
+// SplitByBytes is a function that splits a file by the number of bytes.
 func SplitByBytes(file *os.File, byteSize int, baseFileName string, suffixLen int) {
 	buffer := make([]byte, byteSize)
 	strings := GenerateStrings(suffixLen, "", 0)
