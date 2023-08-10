@@ -87,19 +87,17 @@ func IllegalArgsChecker(params A) {
 		os.Exit(1)
 	}
 
-	flagExist := lineSet || fileSet || byteSet
-
-	if lineCount <= 0 && flagExist {
+	if lineCount <= 0 && lineSet {
 		fmt.Printf("split: %d: illegal line count\n", lineCount)
 		os.Exit(1)
 	}
 
-	if fileCount <= 0 && flagExist {
+	if fileCount <= 0 && fileSet {
 		fmt.Printf("split: %d: illegal file count\n", fileCount)
 		os.Exit(1)
 	}
 
-	if byteSize <= 0 && flagExist {
+	if byteSize <= 0 && byteSet {
 		fmt.Printf("split: %d: illegal byte size\n", byteSize)
 		os.Exit(1)
 	}
