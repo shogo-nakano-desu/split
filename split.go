@@ -8,11 +8,12 @@ import (
 	"strings"
 )
 
-func SplitByLines(file *os.File, lineCount int, baseFileName string) {
+func SplitByLines(file *os.File, lineCount int, baseFileName string, suffixLen int) {
 	scanner := bufio.NewScanner(file)
 	var buffer strings.Builder
 
-	fileIdx := 1
+	strings := GenerateStrings(suffixLen, "", 0)
+	fileIdx := 0
 	lineIdx := 0
 
 	for scanner.Scan() {
@@ -20,7 +21,7 @@ func SplitByLines(file *os.File, lineCount int, baseFileName string) {
 		lineIdx++
 
 		if lineIdx == lineCount {
-			writeToFile(buffer.String(), baseFileName, fileIdx)
+			writeToFile(buffer.String(), baseFileName, strings[fileIdx])
 			buffer.Reset()
 			lineIdx = 0
 			fileIdx++
@@ -28,11 +29,11 @@ func SplitByLines(file *os.File, lineCount int, baseFileName string) {
 	}
 
 	if buffer.Len() > 0 {
-		writeToFile(buffer.String(), baseFileName, fileIdx)
+		writeToFile(buffer.String(), baseFileName, strings[fileIdx])
 	}
 }
 
-func SplitByFileCounts(file *os.File, fileCount int, baseFileName string) {
+func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffixLen int) {
 	fileInfo, err := file.Stat()
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -43,7 +44,8 @@ func SplitByFileCounts(file *os.File, fileCount int, baseFileName string) {
 	averageSize := totalSize / int64(fileCount)
 
 	buffer := make([]byte, averageSize)
-	fileIdx := 1
+	strings := GenerateStrings(suffixLen, "", 0)
+	fileIdx := 0
 
 	for {
 		n, err := file.Read(buffer)
@@ -55,14 +57,15 @@ func SplitByFileCounts(file *os.File, fileCount int, baseFileName string) {
 			return
 		}
 
-		writeToFile(string(buffer[:n]), baseFileName, fileIdx)
+		writeToFile(string(buffer[:n]), baseFileName, strings[fileIdx])
 		fileIdx++
 	}
 }
 
-func SplitByBytes(file *os.File, byteSize int, baseFileName string) {
+func SplitByBytes(file *os.File, byteSize int, baseFileName string, suffixLen int) {
 	buffer := make([]byte, byteSize)
-	fileIdx := 1
+	strings := GenerateStrings(suffixLen, "", 0)
+	fileIdx := 0
 
 	for {
 		n, err := file.Read(buffer)
@@ -74,7 +77,7 @@ func SplitByBytes(file *os.File, byteSize int, baseFileName string) {
 			return
 		}
 
-		writeToFile(string(buffer[:n]), baseFileName, fileIdx)
+		writeToFile(string(buffer[:n]), baseFileName, strings[fileIdx])
 		fileIdx++
 	}
 }
