@@ -10,16 +10,16 @@ import (
 // split [-l line_count] [-a suffix_length] [file [prefix]]
 
 // TODOs
-// ・-aをsuffix lengthとして使う
 // ・ファイル名がなかった場合には、追加でファイル名が与えられるのを待つようにする。
+// ・でかいファイルでも高速に読み込むことができるようにする。
 
 func main() {
 	var lineCount int
-	lineSet := false
+	// lineSet := false
 	var fileCount int
-	fileSet := false
+	// fileSet := false
 	var byteSize int
-	byteSet := false
+	// byteSet := false
 	var suffixLen int
 
 	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
@@ -32,43 +32,7 @@ func main() {
 
 	fs.Parse(args)
 
-	for _, arg := range args {
-		switch arg {
-		case "-l":
-			lineSet = true
-		case "-n":
-			fileSet = true
-		case "-b":
-			byteSet = true
-		}
-	}
-
-	if (lineSet && fileSet) || (lineSet && byteSet) || (fileSet && byteSet) || (lineSet && fileSet && byteSet) {
-		fmt.Println(
-			`usage: split [-l line_count] [-a suffix_length] [file [prefix]]
-			split -b byte_count[K|k|M|m|G|g] [-a suffix_length] [file [prefix]]
-			split -n chunk_count [-a suffix_length] [file [prefix]]
-			split -p pattern [-a suffix_length] [file [prefix]]`,
-		)
-		os.Exit(1)
-	}
-
-	flagExist := lineSet || fileSet || byteSet
-
-	if lineCount <= 0 && !flagExist {
-		fmt.Printf("split: %d: illegal line count\n", lineCount)
-		os.Exit(1)
-	}
-
-	if fileCount <= 0 && !flagExist {
-		fmt.Printf("split: %d: illegal file count\n", fileCount)
-		os.Exit(1)
-	}
-
-	if byteSize <= 0 && !flagExist {
-		fmt.Printf("split: %d: illegal byte size\n", byteSize)
-		os.Exit(1)
-	}
+	IllegalArgsChecker(A{lineCount, fileCount, byteSize, args})
 
 	nonFlagArgs := fs.Args()
 	if len(nonFlagArgs) <= 0 {
