@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
 	"reflect"
 	"testing"
 )
@@ -738,61 +736,50 @@ func TestGenerateStringsTooBigLength(t *testing.T) {
 }
 
 func TestIllegalArgsChecker(t *testing.T) {
-	IllegalArgsChecker(Args{LineCount: 1, FileCount: 0, ByteSize: 0, Args: []string{"-l", "10", "-a", "3", "test.txt"}})
+	err := IllegalArgsChecker(Args{LineCount: 1, FileCount: 0, ByteSize: 0, Args: []string{"-l", "10", "-a", "3", "test.txt"}})
+	if err != nil {
+		t.Errorf("expected nil, got %v", err)
+	}
 }
 
 func TestIllegalArgsCheckerDuplicateArgs(t *testing.T) {
-	if os.Getenv("BE_CRASH") == "1" {
-		IllegalArgsChecker(Args{LineCount: 3, FileCount: 0, ByteSize: 0, Args: []string{"-l", "10", "-l", "3", "test.txt"}})
-		return
+	err := IllegalArgsChecker(Args{LineCount: 3, FileCount: 0, ByteSize: 0, Args: []string{"-l", "10", "-l", "3", "test.txt"}})
+	expected := fmt.Errorf(
+		`usage: split [-l line_count] [-a suffix_length] [file [prefix]]
+			split -b byte_count[K|k|M|m|G|g] [-a suffix_length] [file [prefix]]
+			split -n chunk_count [-a suffix_length] [file [prefix]]
+			split -p pattern [-a suffix_length] [file [prefix]]`)
+	if err.Error() != expected.Error() {
+		t.Errorf("expected %v, got %v", expected, err)
 	}
-	cmd := exec.Command(os.Args[0], "-test.run=TestIllegalArgsCheckerDuplicateArgs")
-	cmd.Env = append(os.Environ(), "BE_CRASH=1")
-	err := cmd.Run()
-	if e, ok := err.(*exec.ExitError); ok && !e.Success() {
-		return
-	}
-	t.Fatalf("process ran with err %v, want exit status 1", err)
 }
 
 func TestIllegalArgsCheckerMultipleArgs(t *testing.T) {
-	if os.Getenv("BE_CRASH") == "1" {
-		IllegalArgsChecker(Args{LineCount: 3, FileCount: 0, ByteSize: 1, Args: []string{"-b", "1", "-l", "3", "test.txt"}})
-		return
+	err := IllegalArgsChecker(Args{LineCount: 3, FileCount: 0, ByteSize: 1, Args: []string{"-b", "1", "-l", "3", "test.txt"}})
+	expected := fmt.Errorf(
+		`usage: split [-l line_count] [-a suffix_length] [file [prefix]]
+			split -b byte_count[K|k|M|m|G|g] [-a suffix_length] [file [prefix]]
+			split -n chunk_count [-a suffix_length] [file [prefix]]
+			split -p pattern [-a suffix_length] [file [prefix]]`,
+	)
+	if err.Error() != expected.Error() {
+		t.Errorf("expected %v, got %v", expected, err)
 	}
-	cmd := exec.Command(os.Args[0], "-test.run=TestIllegalArgsCheckerMultipleArgs")
-	cmd.Env = append(os.Environ(), "BE_CRASH=1")
-	err := cmd.Run()
-	if e, ok := err.(*exec.ExitError); ok && !e.Success() {
-		return
-	}
-	t.Fatalf("process ran with err %v, want exit status 1", err)
 }
 
 func TestIllegalArgsCheckerUnknownArgs(t *testing.T) {
-	if os.Getenv("BE_CRASH") == "1" {
-		IllegalArgsChecker(Args{LineCount: 2, FileCount: 0, ByteSize: 0, Args: []string{"-l", "2", "-t", "3", "test.txt"}})
-		return
+	err := IllegalArgsChecker(Args{LineCount: 2, FileCount: 0, ByteSize: 0, Args: []string{"-l", "2", "-t", "3", "test.txt"}})
+	expected := fmt.Errorf("Error: unknown option -t")
+	if err.Error() != expected.Error() {
+		t.Errorf("expected %v, got %v", expected, err)
 	}
-	cmd := exec.Command(os.Args[0], "-test.run=TestIllegalArgsCheckerUnknownArgs")
-	cmd.Env = append(os.Environ(), "BE_CRASH=1")
-	err := cmd.Run()
-	if e, ok := err.(*exec.ExitError); ok && !e.Success() {
-		return
-	}
-	t.Fatalf("process ran with err %v, want exit status 1", err)
+
 }
 
 func TestIllegalArgsCheckerInvalidValue(t *testing.T) {
-	if os.Getenv("BE_CRASH") == "1" {
-		IllegalArgsChecker(Args{LineCount: 0, FileCount: 0, ByteSize: 0, Args: []string{"-l", "0", "test.txt"}})
-		return
+	err := IllegalArgsChecker(Args{LineCount: 0, FileCount: 0, ByteSize: 0, Args: []string{"-l", "0", "test.txt"}})
+	expected := fmt.Errorf("Error: 0: illegal line count\n")
+	if err.Error() != expected.Error() {
+		t.Errorf("expected %v, got %v", expected, err)
 	}
-	cmd := exec.Command(os.Args[0], "-test.run=TestIllegalArgsCheckerUnknownArgs")
-	cmd.Env = append(os.Environ(), "BE_CRASH=1")
-	err := cmd.Run()
-	if e, ok := err.(*exec.ExitError); ok && !e.Success() {
-		return
-	}
-	t.Fatalf("process ran with err %v, want exit status 1", err)
 }
