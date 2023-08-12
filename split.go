@@ -9,11 +9,14 @@ import (
 )
 
 // SplitByLines is a function that splits a file by the number of lines.
-func SplitByLines(file *os.File, lineCount int, baseFileName string, suffixLen int) {
+func SplitByLines(file *os.File, lineCount int, baseFileName string, suffixLen int) error {
 	scanner := bufio.NewScanner(file)
 	var buffer strings.Builder
 
-	strings := GenerateStrings(suffixLen, "", 0)
+	strings, err := GenerateStrings(suffixLen, "", 0)
+	if err != nil {
+		return err
+	}
 	fileIdx := 0
 	lineIdx := 0
 
@@ -22,7 +25,10 @@ func SplitByLines(file *os.File, lineCount int, baseFileName string, suffixLen i
 		lineIdx++
 
 		if lineIdx == lineCount {
-			writeToFile(buffer.String(), baseFileName, strings[fileIdx])
+			err := writeToFile(buffer.String(), baseFileName, strings[fileIdx])
+			if err != nil {
+				return err
+			}
 			buffer.Reset()
 			lineIdx = 0
 			fileIdx++
@@ -30,23 +36,29 @@ func SplitByLines(file *os.File, lineCount int, baseFileName string, suffixLen i
 	}
 
 	if buffer.Len() > 0 {
-		writeToFile(buffer.String(), baseFileName, strings[fileIdx])
+		err := writeToFile(buffer.String(), baseFileName, strings[fileIdx])
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // SplitByFileCounts is a function that splits a file to the number of files.
-func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffixLen int) {
+func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffixLen int) error {
 	fileInfo, err := file.Stat()
 	if err != nil {
-		fmt.Println("Error:", err)
-		return
+		return err
 	}
 
 	totalSize := fileInfo.Size()
 	averageSize := totalSize / int64(fileCount)
 
 	buffer := make([]byte, averageSize)
-	strings := GenerateStrings(suffixLen, "", 0)
+	strings, err := GenerateStrings(suffixLen, "", 0)
+	if err != nil {
+		return err
+	}
 	fileIdx := 0
 
 	for {
@@ -55,19 +67,25 @@ func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffix
 			break
 		}
 		if err != nil {
-			fmt.Println("Error:", err)
-			return
+			return fmt.Errorf("error: reading file: %v", err)
 		}
 
-		writeToFile(string(buffer[:n]), baseFileName, strings[fileIdx])
+		err = writeToFile(string(buffer[:n]), baseFileName, strings[fileIdx])
+		if err != nil {
+			return err
+		}
 		fileIdx++
 	}
+	return nil
 }
 
 // SplitByBytes is a function that splits a file by the number of bytes.
-func SplitByBytes(file *os.File, byteSize int, baseFileName string, suffixLen int) {
+func SplitByBytes(file *os.File, byteSize int, baseFileName string, suffixLen int) error {
 	buffer := make([]byte, byteSize)
-	strings := GenerateStrings(suffixLen, "", 0)
+	strings, err := GenerateStrings(suffixLen, "", 0)
+	if err != nil {
+		return err
+	}
 	fileIdx := 0
 
 	for {
@@ -76,39 +94,39 @@ func SplitByBytes(file *os.File, byteSize int, baseFileName string, suffixLen in
 			break
 		}
 		if err != nil {
-			fmt.Println("Error:", err)
-			return
+			return fmt.Errorf("error: reading file: %v", err)
 		}
 
-		writeToFile(string(buffer[:n]), baseFileName, strings[fileIdx])
+		err = writeToFile(string(buffer[:n]), baseFileName, strings[fileIdx])
+		if err != nil {
+			return err
+		}
 		fileIdx++
 	}
+	return nil
 }
 
 // writeToFile is a function that writes the given content to the file.
-func writeToFile(content string, baseFileName string, suffix string) {
+func writeToFile(content string, baseFileName string, suffix string) error {
 	if baseFileName == "" {
 		baseFileName = "x"
 	}
 	newFileName := fmt.Sprintf("%s%s", baseFileName, suffix)
 	outFile, err := os.Create(newFileName)
 	if err != nil {
-		fmt.Println("Error:", err)
-		os.Exit(1)
+		return fmt.Errorf("error creating file: %v", err)
 	}
 
 	defer func() {
-		err := outFile.Close()
-		if err != nil {
-			fmt.Printf("Error closing the file: %v\n", err)
-			os.Exit(1)
+		closeErr := outFile.Close()
+		if closeErr != nil && err == nil {
+			err = fmt.Errorf("error closing the file: %v", closeErr)
 		}
 	}()
 
 	_, err = outFile.WriteString(content)
 	if err != nil {
-		fmt.Printf("Error writing to the file: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error writing to the file: %v", err)
 	}
-
+	return nil
 }

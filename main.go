@@ -1,3 +1,4 @@
+// The main file of the split command.
 package main
 
 import (
@@ -6,42 +7,30 @@ import (
 	"os"
 )
 
-// Usage
-// split [-l line_count] [-a suffix_length] [file [prefix]]
-
 // TODOs
 // ・ファイル名がなかった場合には、追加でファイル名が与えられるのを待つようにする。
 // ・でかいファイルでも高速に読み込むことができるようにする。
 
 func main() {
-	var lineCount int
-	// lineSet := false
-	var fileCount int
-	// fileSet := false
-	var byteSize int
-	// byteSet := false
-	var suffixLen int
-
 	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-	fs.IntVar(&lineCount, "l", 0, "Number of lines per split file.")
-	fs.IntVar(&fileCount, "n", 0, "Number of files to split into.")
-	fs.IntVar(&byteSize, "b", 0, "Number of bytes per split file.")
-	fs.IntVar(&suffixLen, "a", 2, "Suffix length.")
 
-	args := NormalizeArgs(os.Args[1:])
-
-	err := fs.Parse(args)
+	res, err := ParseArgs(fs)
 	if err != nil {
-		fmt.Println("Error: fail to parse arguments, ", err)
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+	lineCount, fileCount, byteSize, suffixLen, args := res.LineCount, res.FileCount, res.ByteSize, res.SuffixLen, res.Args
 
-	IllegalArgsChecker(Args{lineCount, fileCount, byteSize, args})
+	err = IllegalArgsChecker(Args{lineCount, fileCount, byteSize, args})
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 
 	nonFlagArgs := fs.Args()
 	if len(nonFlagArgs) <= 0 {
 		// TODO: ファイル名がなかった場合には、追加でファイル名が与えられるのを待つようにする。
-		fmt.Printf("Please provide a file to split.")
+		fmt.Println("Please provide a file to split.")
 		os.Exit(1)
 	}
 	splitFileName := nonFlagArgs[0]
@@ -53,8 +42,8 @@ func main() {
 
 	file, err := os.Open(splitFileName)
 	if err != nil {
-		fmt.Println("Error:", err)
-		return
+		fmt.Printf("Error opening the file: %v\n", err)
+		os.Exit(1)
 	}
 
 	defer func() {
@@ -66,13 +55,25 @@ func main() {
 	}()
 
 	if lineCount > 0 {
-		SplitByLines(file, lineCount, prefixFileName, suffixLen)
+		err := SplitByLines(file, lineCount, prefixFileName, suffixLen)
+		if err != nil {
+			fmt.Printf("%v\n", err)
+			os.Exit(1)
+		}
 	} else if fileCount > 0 {
-		SplitByFileCounts(file, fileCount, prefixFileName, suffixLen)
+		err := SplitByFileCounts(file, fileCount, prefixFileName, suffixLen)
+		if err != nil {
+			fmt.Printf("%v\n", err)
+			os.Exit(1)
+		}
 	} else if byteSize > 0 {
-		SplitByBytes(file, byteSize, prefixFileName, suffixLen)
+		err := SplitByBytes(file, byteSize, prefixFileName, suffixLen)
+		if err != nil {
+			fmt.Printf("%v\n", err)
+			os.Exit(1)
+		}
 	} else {
 		fmt.Println("Please specify a splitting option (-l, -n, -b).")
-		return
+		os.Exit(1)
 	}
 }

@@ -1,32 +1,33 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"os"
-	"os/exec"
 	"reflect"
 	"testing"
 )
 
 func TestNormalizeArgsBasicCase(t *testing.T) {
-	result := NormalizeArgs([]string{"-l", "10", "-a", "3", "test.txt"})
+	res := NormalizeArgs([]string{"-l", "10", "-a", "3", "test.txt"})
 	expected := []string{"-l", "10", "-a", "3", "test.txt"}
 
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("expected %v, got %v", expected, result)
+	if !reflect.DeepEqual(res, expected) {
+		t.Errorf("expected %v, got %v", expected, res)
 	}
 }
 
 func TestNormalizeArgsWithNoSpaceBetweenFlagAndArg(t *testing.T) {
-	result := NormalizeArgs([]string{"-l10", "-a3", "test.txt"})
+	res := NormalizeArgs([]string{"-l10", "-a3", "test.txt"})
 	expected := []string{"-l", "10", "-a", "3", "test.txt"}
 
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("expected %v, got %v", expected, result)
+	if !reflect.DeepEqual(res, expected) {
+		t.Errorf("expected %v, got %v", expected, res)
 	}
 }
 
 func TestGenerateStrings(t *testing.T) {
-	result := GenerateStrings(2, "", 0)
+	res, _ := GenerateStrings(2, "", 0)
 	expected := []string{
 		"aa",
 		"ab",
@@ -705,103 +706,124 @@ func TestGenerateStrings(t *testing.T) {
 		"zy",
 		"zz",
 	}
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("expected %v, got %v", expected, result)
+	if !reflect.DeepEqual(res, expected) {
+		t.Errorf("expected %v, got %v", expected, res)
 	}
 }
 
 func TestGenerateStringsLotOfStrs(t *testing.T) {
-	resultLen := len(GenerateStrings(4, "", 0))
+	res, _ := GenerateStrings(4, "", 0)
+	resLen := len(res)
 	expectedLen := 456976
-	if resultLen != expectedLen {
-		t.Errorf("expected %v, got %v", expectedLen, resultLen)
+	if resLen != expectedLen {
+		t.Errorf("expected %v, got %v", expectedLen, resLen)
 	}
 }
 
 func TestGenerateStringsZeroLength(t *testing.T) {
-	if os.Getenv("BE_CRASH") == "1" {
-		GenerateStrings(0, "", 0)
-		return
+	_, err := GenerateStrings(0, "", 0)
+	expected := fmt.Errorf("Error: suffix length must be greater than 0")
+	if err.Error() != expected.Error() {
+		t.Errorf("expected %v, got %v", expected, err)
 	}
-	cmd := exec.Command(os.Args[0], "-test.run=TestGenerateStringsZeroLength")
-	cmd.Env = append(os.Environ(), "BE_CRASH=1")
-	err := cmd.Run()
-	if e, ok := err.(*exec.ExitError); ok && !e.Success() {
-		return
-	}
-	t.Fatalf("process ran with err %v, want exit status 1", err)
+
 }
 
 func TestGenerateStringsTooBigLength(t *testing.T) {
-	if os.Getenv("BE_CRASH") == "1" {
-		GenerateStrings(6, "", 0)
-		return
+	_, err := GenerateStrings(6, "", 0)
+	expected := fmt.Errorf("Error: suffix length must be less than or equal to 5")
+	if err.Error() != expected.Error() {
+		t.Errorf("expected %v, got %v", expected, err)
 	}
-	cmd := exec.Command(os.Args[0], "-test.run=TestGenerateStringsTooBigLength")
-	cmd.Env = append(os.Environ(), "BE_CRASH=1")
-	err := cmd.Run()
-	if e, ok := err.(*exec.ExitError); ok && !e.Success() {
-		return
-	}
-	t.Fatalf("process ran with err %v, want exit status 1", err)
 }
 
 func TestIllegalArgsChecker(t *testing.T) {
-	IllegalArgsChecker(Args{LineCount: 1, FileCount: 0, ByteSize: 0, Args: []string{"-l", "10", "-a", "3", "test.txt"}})
+	err := IllegalArgsChecker(Args{LineCount: 1, FileCount: 0, ByteSize: 0, Args: []string{"-l", "10", "-a", "3", "test.txt"}})
+	if err != nil {
+		t.Errorf("expected nil, got %v", err)
+	}
 }
 
 func TestIllegalArgsCheckerDuplicateArgs(t *testing.T) {
-	if os.Getenv("BE_CRASH") == "1" {
-		IllegalArgsChecker(Args{LineCount: 3, FileCount: 0, ByteSize: 0, Args: []string{"-l", "10", "-l", "3", "test.txt"}})
-		return
+	err := IllegalArgsChecker(Args{LineCount: 3, FileCount: 0, ByteSize: 0, Args: []string{"-l", "10", "-l", "3", "test.txt"}})
+	expected := fmt.Errorf(
+		`usage: split [-l line_count] [-a suffix_length] [file [prefix]]
+			split -b byte_count[K|k|M|m|G|g] [-a suffix_length] [file [prefix]]
+			split -n chunk_count [-a suffix_length] [file [prefix]]
+			split -p pattern [-a suffix_length] [file [prefix]]`)
+	if err.Error() != expected.Error() {
+		t.Errorf("expected %v, got %v", expected, err)
 	}
-	cmd := exec.Command(os.Args[0], "-test.run=TestIllegalArgsCheckerDuplicateArgs")
-	cmd.Env = append(os.Environ(), "BE_CRASH=1")
-	err := cmd.Run()
-	if e, ok := err.(*exec.ExitError); ok && !e.Success() {
-		return
-	}
-	t.Fatalf("process ran with err %v, want exit status 1", err)
 }
 
 func TestIllegalArgsCheckerMultipleArgs(t *testing.T) {
-	if os.Getenv("BE_CRASH") == "1" {
-		IllegalArgsChecker(Args{LineCount: 3, FileCount: 0, ByteSize: 1, Args: []string{"-b", "1", "-l", "3", "test.txt"}})
-		return
+	err := IllegalArgsChecker(Args{LineCount: 3, FileCount: 0, ByteSize: 1, Args: []string{"-b", "1", "-l", "3", "test.txt"}})
+	expected := fmt.Errorf(
+		`usage: split [-l line_count] [-a suffix_length] [file [prefix]]
+			split -b byte_count[K|k|M|m|G|g] [-a suffix_length] [file [prefix]]
+			split -n chunk_count [-a suffix_length] [file [prefix]]
+			split -p pattern [-a suffix_length] [file [prefix]]`,
+	)
+	if err.Error() != expected.Error() {
+		t.Errorf("expected %v, got %v", expected, err)
 	}
-	cmd := exec.Command(os.Args[0], "-test.run=TestIllegalArgsCheckerMultipleArgs")
-	cmd.Env = append(os.Environ(), "BE_CRASH=1")
-	err := cmd.Run()
-	if e, ok := err.(*exec.ExitError); ok && !e.Success() {
-		return
-	}
-	t.Fatalf("process ran with err %v, want exit status 1", err)
 }
 
 func TestIllegalArgsCheckerUnknownArgs(t *testing.T) {
-	if os.Getenv("BE_CRASH") == "1" {
-		IllegalArgsChecker(Args{LineCount: 2, FileCount: 0, ByteSize: 0, Args: []string{"-l", "2", "-t", "3", "test.txt"}})
-		return
+	err := IllegalArgsChecker(Args{LineCount: 2, FileCount: 0, ByteSize: 0, Args: []string{"-l", "2", "-t", "3", "test.txt"}})
+	expected := fmt.Errorf("Error: unknown option -t")
+	if err.Error() != expected.Error() {
+		t.Errorf("expected %v, got %v", expected, err)
 	}
-	cmd := exec.Command(os.Args[0], "-test.run=TestIllegalArgsCheckerUnknownArgs")
-	cmd.Env = append(os.Environ(), "BE_CRASH=1")
-	err := cmd.Run()
-	if e, ok := err.(*exec.ExitError); ok && !e.Success() {
-		return
-	}
-	t.Fatalf("process ran with err %v, want exit status 1", err)
+
 }
 
 func TestIllegalArgsCheckerInvalidValue(t *testing.T) {
-	if os.Getenv("BE_CRASH") == "1" {
-		IllegalArgsChecker(Args{LineCount: 0, FileCount: 0, ByteSize: 0, Args: []string{"-l", "0", "test.txt"}})
-		return
+	err := IllegalArgsChecker(Args{LineCount: 0, FileCount: 0, ByteSize: 0, Args: []string{"-l", "0", "test.txt"}})
+	expected := fmt.Errorf("error: 0: illegal line count")
+	if err.Error() != expected.Error() {
+		t.Errorf("expected %v, got %v", expected, err)
 	}
-	cmd := exec.Command(os.Args[0], "-test.run=TestIllegalArgsCheckerUnknownArgs")
-	cmd.Env = append(os.Environ(), "BE_CRASH=1")
-	err := cmd.Run()
-	if e, ok := err.(*exec.ExitError); ok && !e.Success() {
-		return
+}
+
+func TestParseArgs(t *testing.T) {
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }() // テスト後にos.Argsを元に戻す
+
+	os.Args = []string{"./main", "-l", "10", "-a", "5"}
+	fs := flag.NewFlagSet("./main", flag.ContinueOnError)
+	res, _ := ParseArgs(fs)
+
+	expected := ParseArgsResult{
+		LineCount: 10,
+		FileCount: 0,
+		ByteSize:  0,
+		SuffixLen: 5,
+		Args:      []string{"-l", "10", "-a", "5"},
 	}
-	t.Fatalf("process ran with err %v, want exit status 1", err)
+
+	if !reflect.DeepEqual(res, expected) {
+		t.Errorf("expected %v, got %v", expected, res)
+	}
+}
+
+func TestParseArgsInvalidSemantics(t *testing.T) {
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }() // テスト後にos.Argsを元に戻す
+
+	os.Args = []string{"./main", "-l", "10", "-n", "5"}
+	fs := flag.NewFlagSet("./main", flag.ContinueOnError)
+	res, _ := ParseArgs(fs)
+
+	expected := ParseArgsResult{
+		LineCount: 10,
+		FileCount: 5,
+		ByteSize:  0,
+		SuffixLen: 2,
+		Args:      []string{"-l", "10", "-n", "5"},
+	}
+
+	if !reflect.DeepEqual(res, expected) {
+		t.Errorf("expected %v, got %v", expected, res)
+	}
 }
