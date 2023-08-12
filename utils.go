@@ -1,7 +1,9 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -96,15 +98,55 @@ func IllegalArgsChecker(params Args) error {
 	}
 
 	if lineCount <= 0 && lineSetCount == 1 {
-		return fmt.Errorf("Error: %d: illegal line count\n", lineCount)
+		return fmt.Errorf("error: %d: illegal line count", lineCount)
 	}
 
 	if fileCount <= 0 && fileSetCount == 1 {
-		return fmt.Errorf("Error: %d: illegal file count\n", fileCount)
+		return fmt.Errorf("error: %d: illegal file count", fileCount)
 	}
 
 	if byteSize <= 0 && byteSetCount == 1 {
-		return fmt.Errorf("Error: %d: illegal byte size\n", byteSize)
+		return fmt.Errorf("error: %d: illegal byte size", byteSize)
 	}
 	return nil
+}
+
+// ParseArgsResult is a struct that represents the result of parsing the arguments passed to the program.
+type ParseArgsResult struct {
+	LineCount int
+	FileCount int
+	ByteSize  int
+	SuffixLen int
+	Args      []string
+}
+
+// ParseArgs is a function that parses the arguments passed to the program.
+// It does not care about semantics. Just parse the arguments.
+func ParseArgs(fs *flag.FlagSet) (ParseArgsResult, error) {
+	var lineCount int
+	// lineSet := false
+	var fileCount int
+	// fileSet := false
+	var byteSize int
+	// byteSet := false
+	var suffixLen int
+
+	fs.IntVar(&lineCount, "l", 0, "Number of lines per split file.")
+	fs.IntVar(&fileCount, "n", 0, "Number of files to split into.")
+	fs.IntVar(&byteSize, "b", 0, "Number of bytes per split file.")
+	fs.IntVar(&suffixLen, "a", 2, "Suffix length.")
+
+	args := NormalizeArgs(os.Args[1:])
+
+	err := fs.Parse(args)
+	if err != nil {
+		return ParseArgsResult{}, fmt.Errorf("error: fail to parse arguments, %v", err)
+	}
+	return ParseArgsResult{
+		LineCount: lineCount,
+		FileCount: fileCount,
+		ByteSize:  byteSize,
+		SuffixLen: suffixLen,
+		Args:      args,
+	}, nil
 }

@@ -1,31 +1,33 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"os"
 	"reflect"
 	"testing"
 )
 
 func TestNormalizeArgsBasicCase(t *testing.T) {
-	result := NormalizeArgs([]string{"-l", "10", "-a", "3", "test.txt"})
+	res := NormalizeArgs([]string{"-l", "10", "-a", "3", "test.txt"})
 	expected := []string{"-l", "10", "-a", "3", "test.txt"}
 
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("expected %v, got %v", expected, result)
+	if !reflect.DeepEqual(res, expected) {
+		t.Errorf("expected %v, got %v", expected, res)
 	}
 }
 
 func TestNormalizeArgsWithNoSpaceBetweenFlagAndArg(t *testing.T) {
-	result := NormalizeArgs([]string{"-l10", "-a3", "test.txt"})
+	res := NormalizeArgs([]string{"-l10", "-a3", "test.txt"})
 	expected := []string{"-l", "10", "-a", "3", "test.txt"}
 
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("expected %v, got %v", expected, result)
+	if !reflect.DeepEqual(res, expected) {
+		t.Errorf("expected %v, got %v", expected, res)
 	}
 }
 
 func TestGenerateStrings(t *testing.T) {
-	result, _ := GenerateStrings(2, "", 0)
+	res, _ := GenerateStrings(2, "", 0)
 	expected := []string{
 		"aa",
 		"ab",
@@ -704,17 +706,17 @@ func TestGenerateStrings(t *testing.T) {
 		"zy",
 		"zz",
 	}
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("expected %v, got %v", expected, result)
+	if !reflect.DeepEqual(res, expected) {
+		t.Errorf("expected %v, got %v", expected, res)
 	}
 }
 
 func TestGenerateStringsLotOfStrs(t *testing.T) {
-	result, _ := GenerateStrings(4, "", 0)
-	resultLen := len(result)
+	res, _ := GenerateStrings(4, "", 0)
+	resLen := len(res)
 	expectedLen := 456976
-	if resultLen != expectedLen {
-		t.Errorf("expected %v, got %v", expectedLen, resultLen)
+	if resLen != expectedLen {
+		t.Errorf("expected %v, got %v", expectedLen, resLen)
 	}
 }
 
@@ -778,8 +780,50 @@ func TestIllegalArgsCheckerUnknownArgs(t *testing.T) {
 
 func TestIllegalArgsCheckerInvalidValue(t *testing.T) {
 	err := IllegalArgsChecker(Args{LineCount: 0, FileCount: 0, ByteSize: 0, Args: []string{"-l", "0", "test.txt"}})
-	expected := fmt.Errorf("Error: 0: illegal line count\n")
+	expected := fmt.Errorf("error: 0: illegal line count")
 	if err.Error() != expected.Error() {
 		t.Errorf("expected %v, got %v", expected, err)
+	}
+}
+
+func TestParseArgs(t *testing.T) {
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }() // テスト後にos.Argsを元に戻す
+
+	os.Args = []string{"./main", "-l", "10", "-a", "5"}
+	fs := flag.NewFlagSet("./main", flag.ContinueOnError)
+	res, _ := ParseArgs(fs)
+
+	expected := ParseArgsResult{
+		LineCount: 10,
+		FileCount: 0,
+		ByteSize:  0,
+		SuffixLen: 5,
+		Args:      []string{"-l", "10", "-a", "5"},
+	}
+
+	if !reflect.DeepEqual(res, expected) {
+		t.Errorf("expected %v, got %v", expected, res)
+	}
+}
+
+func TestParseArgsInvalidSemantics(t *testing.T) {
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }() // テスト後にos.Argsを元に戻す
+
+	os.Args = []string{"./main", "-l", "10", "-n", "5"}
+	fs := flag.NewFlagSet("./main", flag.ContinueOnError)
+	res, _ := ParseArgs(fs)
+
+	expected := ParseArgsResult{
+		LineCount: 10,
+		FileCount: 5,
+		ByteSize:  0,
+		SuffixLen: 2,
+		Args:      []string{"-l", "10", "-n", "5"},
+	}
+
+	if !reflect.DeepEqual(res, expected) {
+		t.Errorf("expected %v, got %v", expected, res)
 	}
 }

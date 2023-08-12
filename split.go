@@ -25,7 +25,10 @@ func SplitByLines(file *os.File, lineCount int, baseFileName string, suffixLen i
 		lineIdx++
 
 		if lineIdx == lineCount {
-			writeToFile(buffer.String(), baseFileName, strings[fileIdx])
+			err := writeToFile(buffer.String(), baseFileName, strings[fileIdx])
+			if err != nil {
+				return err
+			}
 			buffer.Reset()
 			lineIdx = 0
 			fileIdx++
@@ -33,7 +36,10 @@ func SplitByLines(file *os.File, lineCount int, baseFileName string, suffixLen i
 	}
 
 	if buffer.Len() > 0 {
-		writeToFile(buffer.String(), baseFileName, strings[fileIdx])
+		err := writeToFile(buffer.String(), baseFileName, strings[fileIdx])
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -61,11 +67,13 @@ func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffix
 			break
 		}
 		if err != nil {
-			fmt.Println("Error:", err)
-			return nil
+			return fmt.Errorf("error: reading file: %v", err)
 		}
 
-		writeToFile(string(buffer[:n]), baseFileName, strings[fileIdx])
+		err = writeToFile(string(buffer[:n]), baseFileName, strings[fileIdx])
+		if err != nil {
+			return err
+		}
 		fileIdx++
 	}
 	return nil
@@ -86,39 +94,39 @@ func SplitByBytes(file *os.File, byteSize int, baseFileName string, suffixLen in
 			break
 		}
 		if err != nil {
-			return err
+			return fmt.Errorf("error: reading file: %v", err)
 		}
 
-		writeToFile(string(buffer[:n]), baseFileName, strings[fileIdx])
+		err = writeToFile(string(buffer[:n]), baseFileName, strings[fileIdx])
+		if err != nil {
+			return err
+		}
 		fileIdx++
 	}
 	return nil
 }
 
 // writeToFile is a function that writes the given content to the file.
-func writeToFile(content string, baseFileName string, suffix string) {
+func writeToFile(content string, baseFileName string, suffix string) error {
 	if baseFileName == "" {
 		baseFileName = "x"
 	}
 	newFileName := fmt.Sprintf("%s%s", baseFileName, suffix)
 	outFile, err := os.Create(newFileName)
 	if err != nil {
-		fmt.Println("Error:", err)
-		os.Exit(1)
+		return fmt.Errorf("error creating file: %v", err)
 	}
 
 	defer func() {
-		err := outFile.Close()
-		if err != nil {
-			fmt.Printf("Error closing the file: %v\n", err)
-			os.Exit(1)
+		closeErr := outFile.Close()
+		if closeErr != nil && err == nil {
+			err = fmt.Errorf("error closing the file: %v", closeErr)
 		}
 	}()
 
 	_, err = outFile.WriteString(content)
 	if err != nil {
-		fmt.Printf("Error writing to the file: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error writing to the file: %v", err)
 	}
-
+	return nil
 }
