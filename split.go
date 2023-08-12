@@ -254,6 +254,63 @@ func SplitByBytes(file *os.File, byteSize int, baseFileName string, suffixLen in
 	return nil
 }
 
+func SplitByBytesMultithread(file *os.File, byteSize int, baseFileName string, suffixLen int) error {
+	buffer := make([]byte, byteSize)
+	strings, err := GenerateStrings(suffixLen, "", 0)
+	if err != nil {
+		return err
+	}
+
+	// ゴルーチンの制御用
+	const maxGoroutines = 10
+	var wg sync.WaitGroup
+	var errorCh = make(chan error, 1) // エラーを伝達するためのチャンネル
+	goroutineCh := make(chan struct{}, maxGoroutines)
+
+	fileIdx := 0
+	for {
+		n, err := file.Read(buffer)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("error: reading file: %v", err)
+		}
+
+		content := string(buffer[:n])
+		suffix := strings[fileIdx]
+
+		goroutineCh <- struct{}{}
+		wg.Add(1)
+		go func(content, suffix string) {
+			defer wg.Done()
+			defer func() { <-goroutineCh }()
+
+			err := writeToFile(content, baseFileName, suffix)
+			if err != nil {
+				select {
+				case errorCh <- err:
+				default:
+				}
+			}
+		}(content, suffix)
+
+		fileIdx++
+	}
+
+	// 全てのゴルーチンが完了するのを待つ
+	wg.Wait()
+
+	// エラーチャンネルからエラーを受け取る（もしあれば）
+	select {
+	case err := <-errorCh:
+		return err
+	default:
+	}
+
+	return nil
+}
+
 // writeToFile is a function that writes the given content to the file.
 func writeToFile(content string, baseFileName string, suffix string) error {
 	if baseFileName == "" {

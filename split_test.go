@@ -34,7 +34,7 @@ func fileNamesWithPattern(pattern string) ([]string, error) {
 func generateLargeText(size int) string {
 	var buffer bytes.Buffer
 	for i := 0; i < size; i++ {
-		buffer.WriteString("a\n")
+		buffer.WriteString("abcdefghijklmnopqrstuvwxyz\n")
 	}
 	return buffer.String()
 }
@@ -225,5 +225,43 @@ func BenchmarkSplitByFileCountsMultithread(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		_ = SplitByFileCountsMultithread(tmpfile, 100000, "testing_file", 5)
+	}
+}
+
+func BenchmarkSplitByBytes(b *testing.B) {
+	tmpfile := createTempFile(
+		generateLargeText(100),
+	)
+
+	defer func() {
+		_ = os.Remove(tmpfile.Name())
+		removeFilesWithPattern("testing_file*")
+	}()
+
+	b.ResetTimer() // タイマーのリセット（セットアップ時間を除外）
+
+	for i := 0; i < b.N; i++ {
+		_ = SplitByBytes(tmpfile, 100, "testing_file", 5)
+	}
+}
+
+func TestS(t *testing.T) {
+	removeFilesWithPattern("testing_file*")
+}
+
+func BenchmarkSplitByBytesMultithread(b *testing.B) {
+	tmpfile := createTempFile(
+		generateLargeText(100),
+	)
+
+	defer func() {
+		_ = os.Remove(tmpfile.Name())
+		removeFilesWithPattern("testing_file*")
+	}()
+
+	b.ResetTimer() // タイマーのリセット（セットアップ時間を除外）
+
+	for i := 0; i < b.N; i++ {
+		_ = SplitByBytesMultithread(tmpfile, 100, "testing_file", 5)
 	}
 }
