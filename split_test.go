@@ -178,6 +178,29 @@ func TestSplitByFileCountsTooLargeFile(t *testing.T) {
 	}
 }
 
+func TestSplitByFileCountsIntoTooManyFiles(t *testing.T) {
+	tmpfile := createTempFile(
+		`first line
+		second line
+		third line
+		fourth line
+		fifth line
+		sixth line`,
+	)
+
+	defer func() {
+		_ = os.Remove(tmpfile.Name())
+		removeFilesWithPattern("testing_file*")
+	}()
+
+	err := SplitByFileCounts(tmpfile, 1000, "testing_file", 2)
+
+	expected := fmt.Errorf("error: can't split into more than 1000 files")
+	if err.Error() != expected.Error() {
+		t.Errorf("expected %v, got %v", expected, err)
+	}
+}
+
 func TestSplitByBytesMultithread(t *testing.T) {
 	tmpfile := createTempFile(
 		`first line

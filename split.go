@@ -80,27 +80,30 @@ func SplitByLinesMultithread(file *os.File, lineCount int, baseFileName string, 
 }
 
 // SplitByFileCounts is a function that splits a file to the number of files.
-func SplitByFileCounts(file *os.File, chunkCount int, baseFileName string, suffixLen int) error {
+func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffixLen int) error {
 	fileInfo, err := file.Stat()
 	if err != nil {
 		return err
 	}
 	totalSize := fileInfo.Size()
 
-	bytesPerChunk := totalSize / int64(chunkCount)
-	remainingBytes := totalSize % int64(chunkCount)
+	bytesPerChunk := totalSize / int64(fileCount)
+	if bytesPerChunk < 1 {
+		return fmt.Errorf("error: can't split into more than %v files", fileCount)
+	}
+	remainingBytes := totalSize % int64(fileCount)
 
 	strs, err := GenerateStrings(suffixLen, "", 0)
 	if err != nil {
 		return err
 	}
 
-	for i := 0; i < chunkCount; i++ {
+	for i := 0; i < fileCount; i++ {
 		if len(strs) <= i {
 			return fmt.Errorf("error: too many files")
 		}
 		var currentChunkSize int64
-		if i == chunkCount-1 {
+		if i == fileCount-1 {
 			currentChunkSize = bytesPerChunk + remainingBytes
 		} else {
 			currentChunkSize = bytesPerChunk

@@ -9,7 +9,6 @@ import (
 
 // TODOs
 // ・ファイル名がなかった場合には、追加でファイル名が与えられるのを待つようにする。
-// split: can't split into more than 1 files
 
 func main() {
 	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
