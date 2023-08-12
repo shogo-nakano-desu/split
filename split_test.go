@@ -160,6 +160,31 @@ func TestSplitByBytes(t *testing.T) {
 	}
 }
 
+func TestSplitByBytesMultithread(t *testing.T) {
+	tmpfile := createTempFile(
+		`first line
+		second line
+		third line
+		fourth line
+		fifth line
+		sixth line`,
+	)
+
+	defer func() {
+		_ = os.Remove(tmpfile.Name())
+		removeFilesWithPattern("testing_file*")
+	}()
+
+	_ = SplitByBytesMultithread(tmpfile, 2, "testing_file", 2)
+
+	res, _ := fileNamesWithPattern("testing_file*")
+	resLen := len(res)
+	expected := 39
+	if !reflect.DeepEqual(resLen, expected) {
+		t.Errorf("expected %v, got %v", expected, resLen)
+	}
+}
+
 func BenchmarkSplitByLines(b *testing.B) {
 	tmpfile := createTempFile(
 		generateLargeText(1000000),
