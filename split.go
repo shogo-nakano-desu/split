@@ -9,11 +9,14 @@ import (
 )
 
 // SplitByLines is a function that splits a file by the number of lines.
-func SplitByLines(file *os.File, lineCount int, baseFileName string, suffixLen int) {
+func SplitByLines(file *os.File, lineCount int, baseFileName string, suffixLen int) error {
 	scanner := bufio.NewScanner(file)
 	var buffer strings.Builder
 
-	strings := GenerateStrings(suffixLen, "", 0)
+	strings, err := GenerateStrings(suffixLen, "", 0)
+	if err != nil {
+		return err
+	}
 	fileIdx := 0
 	lineIdx := 0
 
@@ -32,21 +35,24 @@ func SplitByLines(file *os.File, lineCount int, baseFileName string, suffixLen i
 	if buffer.Len() > 0 {
 		writeToFile(buffer.String(), baseFileName, strings[fileIdx])
 	}
+	return nil
 }
 
 // SplitByFileCounts is a function that splits a file to the number of files.
-func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffixLen int) {
+func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffixLen int) error {
 	fileInfo, err := file.Stat()
 	if err != nil {
-		fmt.Println("Error:", err)
-		return
+		return err
 	}
 
 	totalSize := fileInfo.Size()
 	averageSize := totalSize / int64(fileCount)
 
 	buffer := make([]byte, averageSize)
-	strings := GenerateStrings(suffixLen, "", 0)
+	strings, err := GenerateStrings(suffixLen, "", 0)
+	if err != nil {
+		return err
+	}
 	fileIdx := 0
 
 	for {
@@ -56,18 +62,22 @@ func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffix
 		}
 		if err != nil {
 			fmt.Println("Error:", err)
-			return
+			return nil
 		}
 
 		writeToFile(string(buffer[:n]), baseFileName, strings[fileIdx])
 		fileIdx++
 	}
+	return nil
 }
 
 // SplitByBytes is a function that splits a file by the number of bytes.
-func SplitByBytes(file *os.File, byteSize int, baseFileName string, suffixLen int) {
+func SplitByBytes(file *os.File, byteSize int, baseFileName string, suffixLen int) error {
 	buffer := make([]byte, byteSize)
-	strings := GenerateStrings(suffixLen, "", 0)
+	strings, err := GenerateStrings(suffixLen, "", 0)
+	if err != nil {
+		return err
+	}
 	fileIdx := 0
 
 	for {
@@ -76,13 +86,13 @@ func SplitByBytes(file *os.File, byteSize int, baseFileName string, suffixLen in
 			break
 		}
 		if err != nil {
-			fmt.Println("Error:", err)
-			return
+			return err
 		}
 
 		writeToFile(string(buffer[:n]), baseFileName, strings[fileIdx])
 		fileIdx++
 	}
+	return nil
 }
 
 // writeToFile is a function that writes the given content to the file.

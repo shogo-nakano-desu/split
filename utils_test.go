@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"reflect"
@@ -26,7 +27,7 @@ func TestNormalizeArgsWithNoSpaceBetweenFlagAndArg(t *testing.T) {
 }
 
 func TestGenerateStrings(t *testing.T) {
-	result := GenerateStrings(2, "", 0)
+	result, _ := GenerateStrings(2, "", 0)
 	expected := []string{
 		"aa",
 		"ab",
@@ -711,7 +712,8 @@ func TestGenerateStrings(t *testing.T) {
 }
 
 func TestGenerateStringsLotOfStrs(t *testing.T) {
-	resultLen := len(GenerateStrings(4, "", 0))
+	result, _ := GenerateStrings(4, "", 0)
+	resultLen := len(result)
 	expectedLen := 456976
 	if resultLen != expectedLen {
 		t.Errorf("expected %v, got %v", expectedLen, resultLen)
@@ -719,31 +721,20 @@ func TestGenerateStringsLotOfStrs(t *testing.T) {
 }
 
 func TestGenerateStringsZeroLength(t *testing.T) {
-	if os.Getenv("BE_CRASH") == "1" {
-		GenerateStrings(0, "", 0)
-		return
+	_, err := GenerateStrings(0, "", 0)
+	expected := fmt.Errorf("Error: suffix length must be greater than 0")
+	if err.Error() != expected.Error() {
+		t.Errorf("expected %v, got %v", expected, err)
 	}
-	cmd := exec.Command(os.Args[0], "-test.run=TestGenerateStringsZeroLength")
-	cmd.Env = append(os.Environ(), "BE_CRASH=1")
-	err := cmd.Run()
-	if e, ok := err.(*exec.ExitError); ok && !e.Success() {
-		return
-	}
-	t.Fatalf("process ran with err %v, want exit status 1", err)
+
 }
 
 func TestGenerateStringsTooBigLength(t *testing.T) {
-	if os.Getenv("BE_CRASH") == "1" {
-		GenerateStrings(6, "", 0)
-		return
+	_, err := GenerateStrings(6, "", 0)
+	expected := fmt.Errorf("Error: suffix length must be less than or equal to 5")
+	if err.Error() != expected.Error() {
+		t.Errorf("expected %v, got %v", expected, err)
 	}
-	cmd := exec.Command(os.Args[0], "-test.run=TestGenerateStringsTooBigLength")
-	cmd.Env = append(os.Environ(), "BE_CRASH=1")
-	err := cmd.Run()
-	if e, ok := err.(*exec.ExitError); ok && !e.Success() {
-		return
-	}
-	t.Fatalf("process ran with err %v, want exit status 1", err)
 }
 
 func TestIllegalArgsChecker(t *testing.T) {

@@ -32,28 +32,30 @@ func NormalizeArgs(args []string) []string {
 }
 
 // GenerateStrings is a function that generates strings from the given length.
-func GenerateStrings(length int, prefix string, counter int) []string {
+func GenerateStrings(length int, prefix string, counter int) ([]string, error) {
 	alphabet := "abcdefghijklmnopqrstuvwxyz"
 
 	if counter == 0 && length == 0 {
-		fmt.Println("Err: suffix length must be greater than 0")
-		os.Exit(1)
+		return []string{}, fmt.Errorf("Error: suffix length must be greater than 0")
 	}
 	if length == 0 {
-		return []string{prefix}
+		return []string{prefix}, nil
 	}
 	if length > 5 {
-		fmt.Println("Error: suffix length must be less than or equal to 5")
-		os.Exit(1)
+		return []string{}, fmt.Errorf("Error: suffix length must be less than or equal to 5")
 	}
 
 	var result []string
 	for _, char := range alphabet {
 		counter++
-		result = append(result, GenerateStrings(length-1, prefix+string(char), counter)...)
+		res, err := GenerateStrings(length-1, prefix+string(char), counter)
+		if err != nil {
+			return []string{}, err
+		}
+		result = append(result, res...)
 	}
 
-	return result
+	return result, nil
 }
 
 // Args is a struct that represents the arguments passed to the program.
