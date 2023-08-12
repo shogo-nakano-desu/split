@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -28,6 +29,14 @@ func fileNamesWithPattern(pattern string) ([]string, error) {
 	}
 
 	return matches, nil
+}
+
+func generateLargeText(size int) string {
+	var buffer bytes.Buffer
+	for i := 0; i < size; i++ {
+		buffer.WriteString("a\n")
+	}
+	return buffer.String()
 }
 
 func TestSplitByLines(t *testing.T) {
@@ -100,5 +109,39 @@ func TestSplitByBytes(t *testing.T) {
 	expected := 39
 	if !reflect.DeepEqual(resLen, expected) {
 		t.Errorf("expected %v, got %v", expected, resLen)
+	}
+}
+
+func BenchmarkSplitByLines(b *testing.B) {
+	tmpfile := createTempFile(
+		generateLargeText(1000000),
+	)
+
+	defer func() {
+		_ = os.Remove(tmpfile.Name())
+		removeFilesWithPattern("testing_file*")
+	}()
+
+	b.ResetTimer() // タイマーのリセット（セットアップ時間を除外）
+
+	for i := 0; i < b.N; i++ {
+		_ = SplitByLines(tmpfile, 2, "testing_file", 5)
+	}
+}
+
+func BenchmarkSplitByLinesMultithread(b *testing.B) {
+	tmpfile := createTempFile(
+		generateLargeText(1000000),
+	)
+
+	defer func() {
+		_ = os.Remove(tmpfile.Name())
+		removeFilesWithPattern("testing_file*")
+	}()
+
+	b.ResetTimer() // タイマーのリセット（セットアップ時間を除外）
+
+	for i := 0; i < b.N; i++ {
+		_ = SplitByLinesMultithread(tmpfile, 2, "testing_file", 5)
 	}
 }

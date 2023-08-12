@@ -56,7 +56,7 @@ func main() {
 	}()
 
 	if lineCount > 0 {
-		err := SplitByLines(file, lineCount, prefixFileName, suffixLen)
+		err := SplitByLinesMultithread(file, lineCount, prefixFileName, suffixLen)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			os.Exit(1)

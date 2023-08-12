@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 )
 
 // SplitByLines is a function that splits a file by the number of lines.
@@ -44,9 +45,65 @@ func SplitByLines(file *os.File, lineCount int, baseFileName string, suffixLen i
 	return nil
 }
 
+// SplitByLinesMultithread is a function that splits a file by the number of lines using goroutines.
+func SplitByLinesMultithread(file *os.File, lineCount int, baseFileName string, suffixLen int) error {
+	scanner := bufio.NewScanner(file)
+	chunks := make([][]string, 0)
+
+	var currentChunk []string
+	for scanner.Scan() {
+		currentChunk = append(currentChunk, scanner.Text())
+		if len(currentChunk) == lineCount {
+			chunks = append(chunks, currentChunk)
+			currentChunk = []string{}
+		}
+	}
+	if len(currentChunk) > 0 {
+		chunks = append(chunks, currentChunk)
+	}
+
+	strs, err := GenerateStrings(suffixLen, "", 0)
+	if err != nil {
+		return err
+	}
+
+	const maxGoroutines = 10
+	sem := make(chan struct{}, maxGoroutines)
+	errChan := make(chan error, len(chunks))
+	var wg sync.WaitGroup
+
+	for i, chunk := range chunks {
+		sem <- struct{}{}
+		wg.Add(1)
+
+		go func(idx int, lines []string) {
+			defer wg.Done()
+			content := strings.Join(lines, "\n")
+			err := writeToFile(content, baseFileName, strs[idx])
+			if err != nil {
+				errChan <- err
+			}
+			<-sem
+		}(i, chunk)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	var errors []error
+	for err := range errChan {
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return fmt.Errorf("encountered %d errors, first error: %v", len(errors), errors[0])
+	}
+
+	return nil
+}
+
 // SplitByFileCounts is a function that splits a file to the number of files.
 func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffixLen int) error {
-	// 1. Count total lines
 	totalLines := 0
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -56,13 +113,11 @@ func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffix
 		return err
 	}
 
-	// Reset file pointer to start
 	_, err := file.Seek(0, 0)
 	if err != nil {
 		return err
 	}
 
-	// 2. Calculate lines per file
 	linesPerFile := (totalLines + fileCount - 1) / fileCount
 	strs, err := GenerateStrings(suffixLen, "", 0)
 	if err != nil {
