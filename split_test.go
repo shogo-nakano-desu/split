@@ -39,30 +39,6 @@ func generateLargeText(size int) string {
 	return buffer.String()
 }
 
-func TestSplitByLines(t *testing.T) {
-	tmpfile := createTempFile(
-		`first line
-		second line
-		third line
-		fourth line
-		fifth line
-		sixth line`,
-	)
-
-	defer func() {
-		_ = os.Remove(tmpfile.Name())
-		removeFilesWithPattern("testing_file*")
-	}()
-
-	_ = SplitByLines(tmpfile, 2, "testing_file", 2)
-
-	res, _ := fileNamesWithPattern("testing_file*")
-	expected := []string{"testing_fileaa", "testing_fileab", "testing_fileac"}
-	if !reflect.DeepEqual(res, expected) {
-		t.Errorf("expected %v, got %v", expected, res)
-	}
-}
-
 func TestSplitByLinesMultithread(t *testing.T) {
 	tmpfile := createTempFile(
 		`first line
@@ -111,55 +87,6 @@ func TestSplitByFileCounts(t *testing.T) {
 	}
 }
 
-func TestSplitByFileCountsMultithread(t *testing.T) {
-	tmpfile := createTempFile(
-		`first line
-		second line
-		third line
-		fourth line
-		fifth line
-		sixth line`,
-	)
-
-	defer func() {
-		_ = os.Remove(tmpfile.Name())
-		removeFilesWithPattern("testing_file*")
-	}()
-
-	_ = SplitByFileCountsMultithread(tmpfile, 2, "testing_file", 2)
-
-	res, _ := fileNamesWithPattern("testing_file*")
-	expected := []string{"testing_fileaa", "testing_fileab"}
-	if !reflect.DeepEqual(res, expected) {
-		t.Errorf("expected %v, got %v", expected, res)
-	}
-}
-
-func TestSplitByBytes(t *testing.T) {
-	tmpfile := createTempFile(
-		`first line
-		second line
-		third line
-		fourth line
-		fifth line
-		sixth line`,
-	)
-
-	defer func() {
-		_ = os.Remove(tmpfile.Name())
-		removeFilesWithPattern("testing_file*")
-	}()
-
-	_ = SplitByBytes(tmpfile, 2, "testing_file", 2)
-
-	res, _ := fileNamesWithPattern("testing_file*")
-	resLen := len(res)
-	expected := 39
-	if !reflect.DeepEqual(resLen, expected) {
-		t.Errorf("expected %v, got %v", expected, resLen)
-	}
-}
-
 func TestSplitByBytesMultithread(t *testing.T) {
 	tmpfile := createTempFile(
 		`first line
@@ -182,111 +109,5 @@ func TestSplitByBytesMultithread(t *testing.T) {
 	expected := 39
 	if !reflect.DeepEqual(resLen, expected) {
 		t.Errorf("expected %v, got %v", expected, resLen)
-	}
-}
-
-func BenchmarkSplitByLines(b *testing.B) {
-	tmpfile := createTempFile(
-		generateLargeText(1000000),
-	)
-
-	defer func() {
-		_ = os.Remove(tmpfile.Name())
-		removeFilesWithPattern("testing_file*")
-	}()
-
-	b.ResetTimer() // タイマーのリセット（セットアップ時間を除外）
-
-	for i := 0; i < b.N; i++ {
-		_ = SplitByLines(tmpfile, 2, "testing_file", 5)
-	}
-}
-
-func BenchmarkSplitByLinesMultithread(b *testing.B) {
-	tmpfile := createTempFile(
-		generateLargeText(1000000),
-	)
-
-	defer func() {
-		_ = os.Remove(tmpfile.Name())
-		removeFilesWithPattern("testing_file*")
-	}()
-
-	b.ResetTimer() // タイマーのリセット（セットアップ時間を除外）
-
-	for i := 0; i < b.N; i++ {
-		_ = SplitByLinesMultithread(tmpfile, 2, "testing_file", 5)
-	}
-}
-
-func BenchmarkSplitByFileCounts(b *testing.B) {
-	tmpfile := createTempFile(
-		generateLargeText(100),
-	)
-
-	defer func() {
-		_ = os.Remove(tmpfile.Name())
-		removeFilesWithPattern("testing_file*")
-	}()
-
-	b.ResetTimer() // タイマーのリセット（セットアップ時間を除外）
-
-	for i := 0; i < b.N; i++ {
-		_ = SplitByFileCounts(tmpfile, 100000, "testing_file", 5)
-	}
-}
-
-func BenchmarkSplitByFileCountsMultithread(b *testing.B) {
-	tmpfile := createTempFile(
-		generateLargeText(100),
-	)
-
-	defer func() {
-		_ = os.Remove(tmpfile.Name())
-		removeFilesWithPattern("testing_file*")
-	}()
-
-	b.ResetTimer() // タイマーのリセット（セットアップ時間を除外）
-
-	for i := 0; i < b.N; i++ {
-		_ = SplitByFileCountsMultithread(tmpfile, 100000, "testing_file", 5)
-	}
-}
-
-func BenchmarkSplitByBytes(b *testing.B) {
-	tmpfile := createTempFile(
-		generateLargeText(100),
-	)
-
-	defer func() {
-		_ = os.Remove(tmpfile.Name())
-		removeFilesWithPattern("testing_file*")
-	}()
-
-	b.ResetTimer() // タイマーのリセット（セットアップ時間を除外）
-
-	for i := 0; i < b.N; i++ {
-		_ = SplitByBytes(tmpfile, 100, "testing_file", 5)
-	}
-}
-
-func TestS(t *testing.T) {
-	removeFilesWithPattern("testing_file*")
-}
-
-func BenchmarkSplitByBytesMultithread(b *testing.B) {
-	tmpfile := createTempFile(
-		generateLargeText(100),
-	)
-
-	defer func() {
-		_ = os.Remove(tmpfile.Name())
-		removeFilesWithPattern("testing_file*")
-	}()
-
-	b.ResetTimer() // タイマーのリセット（セットアップ時間を除外）
-
-	for i := 0; i < b.N; i++ {
-		_ = SplitByBytesMultithread(tmpfile, 100, "testing_file", 5)
 	}
 }
