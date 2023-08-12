@@ -46,36 +46,56 @@ func SplitByLines(file *os.File, lineCount int, baseFileName string, suffixLen i
 
 // SplitByFileCounts is a function that splits a file to the number of files.
 func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffixLen int) error {
-	fileInfo, err := file.Stat()
+	// 1. Count total lines
+	totalLines := 0
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		totalLines++
+	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	// Reset file pointer to start
+	_, err := file.Seek(0, 0)
 	if err != nil {
 		return err
 	}
 
-	totalSize := fileInfo.Size()
-	averageSize := totalSize / int64(fileCount)
-
-	buffer := make([]byte, averageSize)
-	strings, err := GenerateStrings(suffixLen, "", 0)
+	// 2. Calculate lines per file
+	linesPerFile := (totalLines + fileCount - 1) / fileCount
+	strs, err := GenerateStrings(suffixLen, "", 0)
 	if err != nil {
 		return err
 	}
+
+	lineIdx := 0
 	fileIdx := 0
+	buffer := strings.Builder{}
 
-	for {
-		n, err := file.Read(buffer)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return fmt.Errorf("error: reading file: %v", err)
-		}
+	scanner = bufio.NewScanner(file)
+	for scanner.Scan() {
+		buffer.WriteString(scanner.Text() + "\n")
+		lineIdx++
 
-		err = writeToFile(string(buffer[:n]), baseFileName, strings[fileIdx])
+		if lineIdx == linesPerFile {
+			err := writeToFile(buffer.String(), baseFileName, strs[fileIdx])
+			if err != nil {
+				return err
+			}
+			buffer.Reset()
+			lineIdx = 0
+			fileIdx++
+		}
+	}
+
+	if buffer.Len() > 0 {
+		err := writeToFile(buffer.String(), baseFileName, strs[fileIdx])
 		if err != nil {
 			return err
 		}
-		fileIdx++
 	}
+
 	return nil
 }
 
