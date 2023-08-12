@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -36,80 +37,82 @@ func SplitByLinesMultithread(file *os.File, lineCount int, baseFileName string, 
 	errChan := make(chan error, len(chunks))
 	var wg sync.WaitGroup
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	for i, chunk := range chunks {
 		sem <- struct{}{}
 		wg.Add(1)
 
-		go func(idx int, lines []string) {
+		go func(ctx context.Context, idx int, lines []string) {
 			defer wg.Done()
-			content := strings.Join(lines, "\n")
-			err := writeToFile(content, baseFileName, strs[idx])
-			if err != nil {
-				errChan <- err
+			select {
+			case <-ctx.Done():
+				return
+			default:
+
+				content := strings.Join(lines, "\n")
+				if len(strs) <= idx {
+					errChan <- fmt.Errorf("error: too many files")
+					cancel()
+					return
+				}
+				err := writeToFile(content, baseFileName, strs[idx])
+				if err != nil {
+					errChan <- err
+					cancel()
+					return
+				}
 			}
 			<-sem
-		}(i, chunk)
+		}(ctx, i, chunk)
 	}
 
 	wg.Wait()
 	close(errChan)
 
-	var errors []error
-	for err := range errChan {
-		errors = append(errors, err)
-	}
-
-	if len(errors) > 0 {
-		return fmt.Errorf("encountered %d errors, first error: %v", len(errors), errors[0])
+	err = <-errChan
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
 // SplitByFileCounts is a function that splits a file to the number of files.
-func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffixLen int) error {
-	totalLines := 0
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		totalLines++
-	}
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-
-	_, err := file.Seek(0, 0)
+func SplitByFileCounts(file *os.File, chunkCount int, baseFileName string, suffixLen int) error {
+	fileInfo, err := file.Stat()
 	if err != nil {
 		return err
 	}
+	totalSize := fileInfo.Size()
 
-	linesPerFile := (totalLines + fileCount - 1) / fileCount
+	bytesPerChunk := totalSize / int64(chunkCount)
+	remainingBytes := totalSize % int64(chunkCount)
+
 	strs, err := GenerateStrings(suffixLen, "", 0)
 	if err != nil {
 		return err
 	}
 
-	lineIdx := 0
-	fileIdx := 0
-	buffer := strings.Builder{}
-
-	scanner = bufio.NewScanner(file)
-	for scanner.Scan() {
-		buffer.WriteString(scanner.Text() + "\n")
-		lineIdx++
-
-		if lineIdx == linesPerFile {
-			err := writeToFile(buffer.String(), baseFileName, strs[fileIdx])
-			if err != nil {
-				return err
-			}
-			buffer.Reset()
-			lineIdx = 0
-			fileIdx++
+	for i := 0; i < chunkCount; i++ {
+		if len(strs) <= i {
+			return fmt.Errorf("error: too many files")
 		}
-	}
+		var currentChunkSize int64
+		if i == chunkCount-1 {
+			currentChunkSize = bytesPerChunk + remainingBytes
+		} else {
+			currentChunkSize = bytesPerChunk
+		}
 
-	if buffer.Len() > 0 {
-		err := writeToFile(buffer.String(), baseFileName, strs[fileIdx])
+		buffer := make([]byte, currentChunkSize)
+		_, err := file.Read(buffer)
+		if err != nil && err != io.EOF {
+			return err
+		}
+
+		err = writeToFile(string(buffer), baseFileName, strs[i])
 		if err != nil {
 			return err
 		}
@@ -142,6 +145,9 @@ func SplitByBytesMultithread(file *os.File, byteSize int, baseFileName string, s
 		}
 
 		content := string(buffer[:n])
+		if len(strings) <= fileIdx {
+			return fmt.Errorf("error: too many files")
+		}
 		suffix := strings[fileIdx]
 
 		goroutineCh <- struct{}{}

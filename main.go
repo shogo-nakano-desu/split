@@ -8,9 +8,8 @@ import (
 )
 
 // TODOs
-// too many filesを出すようにする。-a 1とかで、ファイル数が枯渇した時。splitではファイル作って、最後失敗したところでメッセージを出していそう。
 // ・ファイル名がなかった場合には、追加でファイル名が与えられるのを待つようにする。
-// ・でかいファイルでも高速に読み込むことができるようにする。
+// split: can't split into more than 1 files
 
 func main() {
 	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
