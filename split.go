@@ -154,6 +154,79 @@ func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffix
 	return nil
 }
 
+// SplitByFileCountsMultithread is a function that splits a file to the number of files using goroutines.
+func SplitByFileCountsMultithread(file *os.File, fileCount int, baseFileName string, suffixLen int) error {
+	totalLines := 0
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		totalLines++
+	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	linesPerFile := (totalLines + fileCount - 1) / fileCount
+	strs, err := GenerateStrings(suffixLen, "", 0)
+	if err != nil {
+		return err
+	}
+
+	const maxGoroutines = 10
+	sem := make(chan struct{}, maxGoroutines)
+	errChan := make(chan error, fileCount)
+	var wg sync.WaitGroup
+
+	for i := 0; i < fileCount; i++ {
+		sem <- struct{}{}
+		startLine := i * linesPerFile
+		endLine := startLine + linesPerFile
+
+		if endLine > totalLines {
+			endLine = totalLines
+		}
+
+		wg.Add(1)
+		go func(start, end, idx int) {
+			defer wg.Done()
+			buffer := strings.Builder{}
+			currentLine := 0
+
+			_, err := file.Seek(0, 0)
+			if err != nil {
+				errChan <- err
+				return
+			}
+			scanner := bufio.NewScanner(file)
+			for scanner.Scan() {
+				if currentLine >= start && currentLine < end {
+					buffer.WriteString(scanner.Text() + "\n")
+				}
+				currentLine++
+				if currentLine >= end {
+					break
+				}
+			}
+			err = writeToFile(buffer.String(), baseFileName, strs[idx])
+			if err != nil {
+				errChan <- err
+				return
+			}
+			<-sem
+		}(startLine, endLine, i)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	for err := range errChan {
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // SplitByBytes is a function that splits a file by the number of bytes.
 func SplitByBytes(file *os.File, byteSize int, baseFileName string, suffixLen int) error {
 	buffer := make([]byte, byteSize)

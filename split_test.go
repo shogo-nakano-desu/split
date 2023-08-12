@@ -63,6 +63,30 @@ func TestSplitByLines(t *testing.T) {
 	}
 }
 
+func TestSplitByLinesMultithread(t *testing.T) {
+	tmpfile := createTempFile(
+		`first line
+		second line
+		third line
+		fourth line
+		fifth line
+		sixth line`,
+	)
+
+	defer func() {
+		_ = os.Remove(tmpfile.Name())
+		removeFilesWithPattern("testing_file*")
+	}()
+
+	_ = SplitByLinesMultithread(tmpfile, 2, "testing_file", 2)
+
+	res, _ := fileNamesWithPattern("testing_file*")
+	expected := []string{"testing_fileaa", "testing_fileab", "testing_fileac"}
+	if !reflect.DeepEqual(res, expected) {
+		t.Errorf("expected %v, got %v", expected, res)
+	}
+}
+
 func TestSplitByFileCounts(t *testing.T) {
 	tmpfile := createTempFile(
 		`first line
@@ -79,6 +103,30 @@ func TestSplitByFileCounts(t *testing.T) {
 	}()
 
 	_ = SplitByFileCounts(tmpfile, 2, "testing_file", 2)
+
+	res, _ := fileNamesWithPattern("testing_file*")
+	expected := []string{"testing_fileaa", "testing_fileab"}
+	if !reflect.DeepEqual(res, expected) {
+		t.Errorf("expected %v, got %v", expected, res)
+	}
+}
+
+func TestSplitByFileCountsMultithread(t *testing.T) {
+	tmpfile := createTempFile(
+		`first line
+		second line
+		third line
+		fourth line
+		fifth line
+		sixth line`,
+	)
+
+	defer func() {
+		_ = os.Remove(tmpfile.Name())
+		removeFilesWithPattern("testing_file*")
+	}()
+
+	_ = SplitByFileCountsMultithread(tmpfile, 2, "testing_file", 2)
 
 	res, _ := fileNamesWithPattern("testing_file*")
 	expected := []string{"testing_fileaa", "testing_fileab"}
@@ -143,5 +191,39 @@ func BenchmarkSplitByLinesMultithread(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		_ = SplitByLinesMultithread(tmpfile, 2, "testing_file", 5)
+	}
+}
+
+func BenchmarkSplitByFileCounts(b *testing.B) {
+	tmpfile := createTempFile(
+		generateLargeText(100),
+	)
+
+	defer func() {
+		_ = os.Remove(tmpfile.Name())
+		removeFilesWithPattern("testing_file*")
+	}()
+
+	b.ResetTimer() // タイマーのリセット（セットアップ時間を除外）
+
+	for i := 0; i < b.N; i++ {
+		_ = SplitByFileCounts(tmpfile, 100000, "testing_file", 5)
+	}
+}
+
+func BenchmarkSplitByFileCountsMultithread(b *testing.B) {
+	tmpfile := createTempFile(
+		generateLargeText(100),
+	)
+
+	defer func() {
+		_ = os.Remove(tmpfile.Name())
+		removeFilesWithPattern("testing_file*")
+	}()
+
+	b.ResetTimer() // タイマーのリセット（セットアップ時間を除外）
+
+	for i := 0; i < b.N; i++ {
+		_ = SplitByFileCountsMultithread(tmpfile, 100000, "testing_file", 5)
 	}
 }
