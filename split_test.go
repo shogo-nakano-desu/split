@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -30,7 +31,15 @@ func fileNamesWithPattern(pattern string) ([]string, error) {
 	return matches, nil
 }
 
-func TestSplitByLines(t *testing.T) {
+func generateLargeText(size int) string {
+	var buffer bytes.Buffer
+	for i := 0; i < size; i++ {
+		buffer.WriteString("abcdefghijklmnopqrstuvwxyz\n")
+	}
+	return buffer.String()
+}
+
+func TestSplitByLinesMultithread(t *testing.T) {
 	tmpfile := createTempFile(
 		`first line
 		second line
@@ -45,7 +54,7 @@ func TestSplitByLines(t *testing.T) {
 		removeFilesWithPattern("testing_file*")
 	}()
 
-	_ = SplitByLines(tmpfile, 2, "testing_file", 2)
+	_ = SplitByLinesMultithread(tmpfile, 2, "testing_file", 2)
 
 	res, _ := fileNamesWithPattern("testing_file*")
 	expected := []string{"testing_fileaa", "testing_fileab", "testing_fileac"}
@@ -78,7 +87,7 @@ func TestSplitByFileCounts(t *testing.T) {
 	}
 }
 
-func TestSplitByBytes(t *testing.T) {
+func TestSplitByBytesMultithread(t *testing.T) {
 	tmpfile := createTempFile(
 		`first line
 		second line
@@ -93,7 +102,7 @@ func TestSplitByBytes(t *testing.T) {
 		removeFilesWithPattern("testing_file*")
 	}()
 
-	_ = SplitByBytes(tmpfile, 2, "testing_file", 2)
+	_ = SplitByBytesMultithread(tmpfile, 2, "testing_file", 2)
 
 	res, _ := fileNamesWithPattern("testing_file*")
 	resLen := len(res)

@@ -56,7 +56,7 @@ func main() {
 	}()
 
 	if lineCount > 0 {
-		err := SplitByLines(file, lineCount, prefixFileName, suffixLen)
+		err := SplitByLinesMultithread(file, lineCount, prefixFileName, suffixLen)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			os.Exit(1)
@@ -68,7 +68,7 @@ func main() {
 			os.Exit(1)
 		}
 	} else if byteSize > 0 {
-		err := SplitByBytes(file, byteSize, prefixFileName, suffixLen)
+		err := SplitByBytesMultithread(file, byteSize, prefixFileName, suffixLen)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			os.Exit(1)

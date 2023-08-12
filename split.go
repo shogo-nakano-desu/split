@@ -6,47 +6,68 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 )
 
-// SplitByLines is a function that splits a file by the number of lines.
-func SplitByLines(file *os.File, lineCount int, baseFileName string, suffixLen int) error {
+// SplitByLinesMultithread is a function that splits a file by the number of lines using goroutines.
+func SplitByLinesMultithread(file *os.File, lineCount int, baseFileName string, suffixLen int) error {
 	scanner := bufio.NewScanner(file)
-	var buffer strings.Builder
+	chunks := make([][]string, 0)
 
-	strings, err := GenerateStrings(suffixLen, "", 0)
+	var currentChunk []string
+	for scanner.Scan() {
+		currentChunk = append(currentChunk, scanner.Text())
+		if len(currentChunk) == lineCount {
+			chunks = append(chunks, currentChunk)
+			currentChunk = []string{}
+		}
+	}
+	if len(currentChunk) > 0 {
+		chunks = append(chunks, currentChunk)
+	}
+
+	strs, err := GenerateStrings(suffixLen, "", 0)
 	if err != nil {
 		return err
 	}
-	fileIdx := 0
-	lineIdx := 0
 
-	for scanner.Scan() {
-		buffer.WriteString(scanner.Text() + "\n")
-		lineIdx++
+	const maxGoroutines = 10
+	sem := make(chan struct{}, maxGoroutines)
+	errChan := make(chan error, len(chunks))
+	var wg sync.WaitGroup
 
-		if lineIdx == lineCount {
-			err := writeToFile(buffer.String(), baseFileName, strings[fileIdx])
+	for i, chunk := range chunks {
+		sem <- struct{}{}
+		wg.Add(1)
+
+		go func(idx int, lines []string) {
+			defer wg.Done()
+			content := strings.Join(lines, "\n")
+			err := writeToFile(content, baseFileName, strs[idx])
 			if err != nil {
-				return err
+				errChan <- err
 			}
-			buffer.Reset()
-			lineIdx = 0
-			fileIdx++
-		}
+			<-sem
+		}(i, chunk)
 	}
 
-	if buffer.Len() > 0 {
-		err := writeToFile(buffer.String(), baseFileName, strings[fileIdx])
-		if err != nil {
-			return err
-		}
+	wg.Wait()
+	close(errChan)
+
+	var errors []error
+	for err := range errChan {
+		errors = append(errors, err)
 	}
+
+	if len(errors) > 0 {
+		return fmt.Errorf("encountered %d errors, first error: %v", len(errors), errors[0])
+	}
+
 	return nil
 }
 
 // SplitByFileCounts is a function that splits a file to the number of files.
 func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffixLen int) error {
-	// 1. Count total lines
 	totalLines := 0
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -56,13 +77,11 @@ func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffix
 		return err
 	}
 
-	// Reset file pointer to start
 	_, err := file.Seek(0, 0)
 	if err != nil {
 		return err
 	}
 
-	// 2. Calculate lines per file
 	linesPerFile := (totalLines + fileCount - 1) / fileCount
 	strs, err := GenerateStrings(suffixLen, "", 0)
 	if err != nil {
@@ -99,15 +118,20 @@ func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffix
 	return nil
 }
 
-// SplitByBytes is a function that splits a file by the number of bytes.
-func SplitByBytes(file *os.File, byteSize int, baseFileName string, suffixLen int) error {
+// SplitByBytesMultithread is a function that splits a file by the number of bytes using goroutines.
+func SplitByBytesMultithread(file *os.File, byteSize int, baseFileName string, suffixLen int) error {
 	buffer := make([]byte, byteSize)
 	strings, err := GenerateStrings(suffixLen, "", 0)
 	if err != nil {
 		return err
 	}
-	fileIdx := 0
 
+	const maxGoroutines = 10
+	var wg sync.WaitGroup
+	var errorCh = make(chan error, 1)
+	goroutineCh := make(chan struct{}, maxGoroutines)
+
+	fileIdx := 0
 	for {
 		n, err := file.Read(buffer)
 		if err == io.EOF {
@@ -117,12 +141,35 @@ func SplitByBytes(file *os.File, byteSize int, baseFileName string, suffixLen in
 			return fmt.Errorf("error: reading file: %v", err)
 		}
 
-		err = writeToFile(string(buffer[:n]), baseFileName, strings[fileIdx])
-		if err != nil {
-			return err
-		}
+		content := string(buffer[:n])
+		suffix := strings[fileIdx]
+
+		goroutineCh <- struct{}{}
+		wg.Add(1)
+		go func(content, suffix string) {
+			defer wg.Done()
+			defer func() { <-goroutineCh }()
+
+			err := writeToFile(content, baseFileName, suffix)
+			if err != nil {
+				select {
+				case errorCh <- err:
+				default:
+				}
+			}
+		}(content, suffix)
+
 		fileIdx++
 	}
+
+	wg.Wait()
+
+	select {
+	case err := <-errorCh:
+		return err
+	default:
+	}
+
 	return nil
 }
 
