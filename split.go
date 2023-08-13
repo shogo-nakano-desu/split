@@ -143,6 +143,7 @@ func SplitByFileCountsMultithread(file *os.File, fileCount int, baseFileName str
 	}
 
 	errChan := make(chan error, fileCount)
+	sem := make(chan struct{}, 10)
 
 	for i := 0; i < fileCount; i++ {
 		if len(strs) <= i {
@@ -162,8 +163,10 @@ func SplitByFileCountsMultithread(file *os.File, fileCount int, baseFileName str
 		}
 
 		go func(data []byte, filenameSuffix string) {
+			sem <- struct{}{} // セマフォに値を送信して、スロットを取得
 			err := writeToFile(string(data), baseFileName, filenameSuffix)
 			errChan <- err
+			<-sem // セマフォから値を取り出して、スロットを解放
 		}(buffer, strs[i])
 	}
 

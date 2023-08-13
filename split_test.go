@@ -12,6 +12,43 @@ import (
 	"time"
 )
 
+// Helper functions
+
+const BIG_INT = 9223372036854775807
+
+func createTmpFile(content string) *os.File {
+	tmpfile, _ := os.CreateTemp("", "example_tmp")
+	_, _ = tmpfile.WriteString(content)
+	_, _ = tmpfile.Seek(0, 0)
+	return tmpfile
+}
+
+func removeFilesWithPattern(pattern string) {
+	// Need to wait for the file to be created.
+	time.Sleep(200 * time.Millisecond)
+	matches, _ := filepath.Glob(pattern)
+	for _, match := range matches {
+		_ = os.Remove(match)
+	}
+}
+
+func fileNamesWithPattern(pattern string) ([]string, error) {
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return nil, err
+	}
+
+	return matches, nil
+}
+
+func generateLargeText(size int) string {
+	var buffer bytes.Buffer
+	for i := 0; i < size; i++ {
+		buffer.WriteString("abcdefghijklmnopqrstuvwxyz\n")
+	}
+	return buffer.String()
+}
+
 func TestSplitByLinesMultithread(t *testing.T) {
 	tmpfile := createTmpFile(
 		`first line
@@ -176,7 +213,7 @@ func TestSplitByFileCountsIntoTooManyFiles(t *testing.T) {
 
 	err := SplitByFileCounts(tmpfile, 1000, baseFileName.String(), 2)
 
-	expected := fmt.Errorf("error: can't split into more than 1000 files")
+	expected := fmt.Errorf("error: can't split into more than 77 files")
 	if err.Error() != expected.Error() {
 		t.Errorf("expected %v, got %v", expected, err)
 	}
@@ -255,7 +292,12 @@ func TestSplitByFileCountsMultithreadTooLargeFile(t *testing.T) {
 
 func TestSplitByFileCountsMultithreadIntoTooManyFiles(t *testing.T) {
 	tmpfile := createTmpFile(
-		`1`,
+		`first line
+		second line
+		third line
+		fourth line
+		fifth line
+		sixth line`,
 	)
 
 	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(BIG_INT))
@@ -267,7 +309,7 @@ func TestSplitByFileCountsMultithreadIntoTooManyFiles(t *testing.T) {
 
 	err := SplitByFileCountsMultithread(tmpfile, 1000, baseFileName.String(), 2)
 
-	expected := fmt.Errorf("error: can't split into more than 1000 files")
+	expected := fmt.Errorf("error: can't split into more than 77 files")
 	if err.Error() != expected.Error() {
 		t.Errorf("expected %v, got %v", expected, err)
 	}
@@ -345,37 +387,39 @@ func TestSplitByBytesTooLargeFile(t *testing.T) {
 	}
 }
 
-const BIG_INT = 9223372036854775807
+// func BenchmarkSplitByFileCounts(b *testing.B) {
+// 	tmpfile := createTmpFile(
+// 		generateLargeText(1000000),
+// 	)
 
-func createTmpFile(content string) *os.File {
-	tmpfile, _ := os.CreateTemp("", "example_tmp")
-	_, _ = tmpfile.WriteString(content)
-	_, _ = tmpfile.Seek(0, 0)
-	return tmpfile
-}
+// 	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(BIG_INT))
 
-func removeFilesWithPattern(pattern string) {
-	// Need to wait for the file to be created.
-	time.Sleep(200 * time.Millisecond)
-	matches, _ := filepath.Glob(pattern)
-	for _, match := range matches {
-		_ = os.Remove(match)
-	}
-}
+// 	defer func() {
+// 		_ = os.Remove(tmpfile.Name())
+// 		removeFilesWithPattern(baseFileName.String() + "*")
+// 	}()
 
-func fileNamesWithPattern(pattern string) ([]string, error) {
-	matches, err := filepath.Glob(pattern)
-	if err != nil {
-		return nil, err
-	}
+// 	b.ResetTimer() // タイマーのリセット（セットアップ時間を除外）
 
-	return matches, nil
-}
+// 	for i := 0; i < b.N; i++ {
+// 		_ = SplitByFileCounts(tmpfile, 1, baseFileName.String(), 5)
+// 	}
+// }
 
-func generateLargeText(size int) string {
-	var buffer bytes.Buffer
-	for i := 0; i < size; i++ {
-		buffer.WriteString("abcdefghijklmnopqrstuvwxyz\n")
-	}
-	return buffer.String()
-}
+// func BenchmarkSplitByFileCountsMultithread(b *testing.B) {
+// 	tmpfile := createTmpFile(
+// 		generateLargeText(1000000),
+// 	)
+// 	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(BIG_INT))
+
+// 	defer func() {
+// 		_ = os.Remove(tmpfile.Name())
+// 		removeFilesWithPattern(baseFileName.String() + "*")
+// 	}()
+
+// 	b.ResetTimer() // タイマーのリセット（セットアップ時間を除外）
+
+// 	for i := 0; i < b.N; i++ {
+// 		_ = SplitByFileCountsMultithread(tmpfile, 1, baseFileName.String(), 5)
+// 	}
+// }
