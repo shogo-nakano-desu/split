@@ -152,6 +152,8 @@ func ParseArgs(fs *flag.FlagSet) (ParseArgsResult, error) {
 	}, nil
 }
 
+// GetFileName is a function that gets the file name from the user.
+// If user does not provide the file name, it will ask the user to enter the file name.
 func GetFileName(nonFlagArgs []string, reader *bufio.Reader) (string, error) {
 	if len(nonFlagArgs) == 0 {
 		fmt.Println("File name not provided. Please enter the file name:")
