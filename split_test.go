@@ -387,39 +387,39 @@ func TestSplitByBytesTooLargeFile(t *testing.T) {
 	}
 }
 
-// func BenchmarkSplitByFileCounts(b *testing.B) {
-// 	tmpfile := createTmpFile(
-// 		generateLargeText(1000000),
-// 	)
+func BenchmarkSplitByFileCounts(b *testing.B) {
+	tmpfile := createTmpFile(
+		generateLargeText(1000000),
+	)
 
-// 	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(BIG_INT))
+	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(BIG_INT))
 
-// 	defer func() {
-// 		_ = os.Remove(tmpfile.Name())
-// 		removeFilesWithPattern(baseFileName.String() + "*")
-// 	}()
+	defer func() {
+		_ = os.Remove(tmpfile.Name())
+		removeFilesWithPattern(baseFileName.String() + "*")
+	}()
 
-// 	b.ResetTimer() // タイマーのリセット（セットアップ時間を除外）
+	b.ResetTimer() // タイマーのリセット（セットアップ時間を除外）
 
-// 	for i := 0; i < b.N; i++ {
-// 		_ = SplitByFileCounts(tmpfile, 1, baseFileName.String(), 5)
-// 	}
-// }
+	for i := 0; i < b.N; i++ {
+		_ = SplitByFileCounts(tmpfile, 100000, baseFileName.String(), 5)
+	}
+}
 
-// func BenchmarkSplitByFileCountsMultithread(b *testing.B) {
-// 	tmpfile := createTmpFile(
-// 		generateLargeText(1000000),
-// 	)
-// 	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(BIG_INT))
+func BenchmarkSplitByFileCountsMultithread(b *testing.B) {
+	tmpfile := createTmpFile(
+		generateLargeText(1000000),
+	)
+	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(BIG_INT))
 
-// 	defer func() {
-// 		_ = os.Remove(tmpfile.Name())
-// 		removeFilesWithPattern(baseFileName.String() + "*")
-// 	}()
+	defer func() {
+		_ = os.Remove(tmpfile.Name())
+		removeFilesWithPattern(baseFileName.String() + "*")
+	}()
 
-// 	b.ResetTimer() // タイマーのリセット（セットアップ時間を除外）
+	b.ResetTimer() // タイマーのリセット（セットアップ時間を除外）
 
-// 	for i := 0; i < b.N; i++ {
-// 		_ = SplitByFileCountsMultithread(tmpfile, 1, baseFileName.String(), 5)
-// 	}
-// }
+	for i := 0; i < b.N; i++ {
+		_ = SplitByFileCountsMultithread(tmpfile, 10000, baseFileName.String(), 5)
+	}
+}
