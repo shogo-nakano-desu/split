@@ -125,11 +125,8 @@ type ParseArgsResult struct {
 // It does not care about semantics. Just parse the arguments.
 func ParseArgs(fs *flag.FlagSet) (ParseArgsResult, error) {
 	var lineCount int
-	// lineSet := false
 	var fileCount int
-	// fileSet := false
 	var byteSize int
-	// byteSet := false
 	var suffixLen int
 
 	fs.IntVar(&lineCount, "l", 0, "Number of lines per split file.")
