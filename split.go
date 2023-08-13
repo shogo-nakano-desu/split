@@ -82,8 +82,8 @@ func SplitByLinesMultithread(file *os.File, lineCount int, baseFileName string, 
 	return nil
 }
 
-// SplitByFileCounts is a function that splits a file to the number of files.
-func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffixLen int) error {
+// SplitByFileCountsMultithread is a function that splits a file to the number of files using goroutines.
+func SplitByFileCountsMultithread(file *os.File, fileCount int, baseFileName string, suffixLen int) error {
 	fileInfo, err := file.Stat()
 	if err != nil {
 		return err
@@ -99,6 +99,9 @@ func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffix
 	if err != nil {
 		return err
 	}
+
+	errChan := make(chan error, fileCount)
+	sem := make(chan struct{}, 10)
 
 	for i := 0; i < fileCount; i++ {
 		if len(strs) <= i {
@@ -117,10 +120,25 @@ func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffix
 			return err
 		}
 
-		err = writeToFile(string(buffer), baseFileName, strs[i])
-		if err != nil {
+		go func(data []byte, filenameSuffix string) {
+			sem <- struct{}{}
+			err := writeToFile(string(data), baseFileName, filenameSuffix)
+			errChan <- err
+			<-sem
+		}(buffer, strs[i])
+	}
+
+	for i := 0; i < fileCount; i++ {
+		if err := <-errChan; err != nil {
 			return err
 		}
+	}
+
+	close(errChan)
+
+	err = <-errChan
+	if err != nil {
+		return err
 	}
 
 	return nil

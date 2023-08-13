@@ -112,7 +112,7 @@ func TestSplitByLinesMultithreadTooLargeFile(t *testing.T) {
 	}
 }
 
-func TestSplitByFileCounts(t *testing.T) {
+func TestSplitByFileCountsMultithread(t *testing.T) {
 	tmpfile := createTmpFile(
 		`first line
 		second line
@@ -129,7 +129,7 @@ func TestSplitByFileCounts(t *testing.T) {
 		removeFilesWithPattern(baseFileName.String() + "*")
 	}()
 
-	_ = SplitByFileCounts(tmpfile, 2, baseFileName.String(), 2)
+	_ = SplitByFileCountsMultithread(tmpfile, 2, baseFileName.String(), 2)
 
 	res, _ := fileNamesWithPattern(baseFileName.String() + "*")
 	expected := []string{baseFileName.String() + "aa", baseFileName.String() + "ab"}
@@ -138,7 +138,7 @@ func TestSplitByFileCounts(t *testing.T) {
 	}
 }
 
-func TestSplitByFileCountsTooLargeFile(t *testing.T) {
+func TestSplitByFileCountsMultithreadTooLargeFile(t *testing.T) {
 	tmpfile := createTmpFile(
 		`first line
 		second line
@@ -177,7 +177,7 @@ func TestSplitByFileCountsTooLargeFile(t *testing.T) {
 		removeFilesWithPattern(baseFileName.String() + "*")
 	}()
 
-	err := SplitByFileCounts(tmpfile, 27, baseFileName.String(), 1)
+	err := SplitByFileCountsMultithread(tmpfile, 27, baseFileName.String(), 1)
 
 	expected := fmt.Errorf("error: too many files")
 	if err.Error() != expected.Error() {
@@ -185,32 +185,7 @@ func TestSplitByFileCountsTooLargeFile(t *testing.T) {
 	}
 }
 
-func TestSplitByFileCountsIntoTooManyFiles(t *testing.T) {
-	tmpfile := createTmpFile(
-		`first line
-		second line
-		third line
-		fourth line
-		fifth line
-		sixth line`,
-	)
-
-	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(bigInt))
-
-	defer func() {
-		_ = os.Remove(tmpfile.Name())
-		removeFilesWithPattern(baseFileName.String() + "*")
-	}()
-
-	err := SplitByFileCounts(tmpfile, 1000, baseFileName.String(), 2)
-
-	expected := fmt.Errorf("error: can't split into more than 77 files")
-	if err.Error() != expected.Error() {
-		t.Errorf("expected %v, got %v", expected, err)
-	}
-}
-
-func TestSplitByBytesMultithread(t *testing.T) {
+func TestSplitByFileCountsMultithreadIntoTooManyFiles(t *testing.T) {
 	tmpfile := createTmpFile(
 		`first line
 		second line
