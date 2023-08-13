@@ -2,9 +2,11 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 )
 
 // TODOs
@@ -27,12 +29,19 @@ func main() {
 	}
 
 	nonFlagArgs := fs.Args()
+	var splitFileName string
 	if len(nonFlagArgs) <= 0 {
-		// TODO: ファイル名がなかった場合には、追加でファイル名が与えられるのを待つようにする。
-		fmt.Println("Please provide a file to split.")
-		os.Exit(1)
+		fmt.Println("File name not provided. Please enter the file name:")
+		reader := bufio.NewReader(os.Stdin)
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Printf("Error reading from stdin: %v\n", err)
+			os.Exit(1)
+		}
+		splitFileName = strings.TrimSpace(input)
+	} else {
+		splitFileName = nonFlagArgs[0]
 	}
-	splitFileName := nonFlagArgs[0]
 
 	prefixFileName := ""
 	if len(nonFlagArgs) >= 2 {
