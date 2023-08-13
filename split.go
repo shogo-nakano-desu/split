@@ -41,16 +41,17 @@ func SplitByLinesMultithread(file *os.File, lineCount int, baseFileName string, 
 	defer cancel()
 
 	for i, chunk := range chunks {
-		sem <- struct{}{}
 		wg.Add(1)
 
 		go func(ctx context.Context, idx int, lines []string) {
 			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
 			select {
 			case <-ctx.Done():
 				return
 			default:
-
 				content := strings.Join(lines, "\n")
 				if len(strs) <= idx {
 					errChan <- fmt.Errorf("error: too many files")
@@ -64,16 +65,18 @@ func SplitByLinesMultithread(file *os.File, lineCount int, baseFileName string, 
 					return
 				}
 			}
-			<-sem
 		}(ctx, i, chunk)
 	}
 
-	wg.Wait()
-	close(errChan)
+	go func() {
+		wg.Wait()
+		close(errChan)
+	}()
 
-	err = <-errChan
-	if err != nil {
-		return err
+	for err := range errChan {
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
