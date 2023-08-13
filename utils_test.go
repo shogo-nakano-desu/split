@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"flag"
 	"fmt"
 	"os"
@@ -825,5 +827,105 @@ func TestParseArgsInvalidSemantics(t *testing.T) {
 
 	if !reflect.DeepEqual(res, expected) {
 		t.Errorf("expected %v, got %v", expected, res)
+	}
+}
+
+func TestGetFileName(t *testing.T) {
+	tests := []struct {
+		nonFlagArgs []string
+		input       string
+		expected    string
+		shouldError bool
+	}{
+		{
+			nonFlagArgs: []string{"filename.txt"},
+			expected:    "filename.txt",
+		},
+		{
+			nonFlagArgs: []string{},
+			input:       "inputfile.txt\n",
+			expected:    "inputfile.txt",
+		},
+		{
+			nonFlagArgs: []string{},
+			input:       "",
+			shouldError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		reader := bufio.NewReader(bytes.NewBufferString(tt.input))
+		result, err := GetFileName(tt.nonFlagArgs, reader)
+
+		if (err != nil) != tt.shouldError {
+			t.Fatalf("expected error: %v, got: %v", tt.shouldError, err)
+		}
+
+		if result != tt.expected {
+			t.Fatalf("expected: %s, got: %s", tt.expected, result)
+		}
+	}
+}
+
+func TestGetFileNameWithValidFileName(t *testing.T) {
+	test := struct {
+		nonFlagArgs []string
+		expected    string
+	}{
+		nonFlagArgs: []string{"filename.txt"},
+		expected:    "filename.txt",
+	}
+
+	reader := bufio.NewReader(bytes.NewBufferString(""))
+	result, err := GetFileName(test.nonFlagArgs, reader)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if result != test.expected {
+		t.Fatalf("expected: %s, got: %s", test.expected, result)
+	}
+}
+
+func TestGetFileNameWithInputString(t *testing.T) {
+	test := struct {
+		nonFlagArgs []string
+		input       string
+		expected    string
+	}{
+		nonFlagArgs: []string{},
+		input:       "inputfile.txt\n",
+		expected:    "inputfile.txt",
+	}
+
+	reader := bufio.NewReader(bytes.NewBufferString(test.input))
+	result, err := GetFileName(test.nonFlagArgs, reader)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if result != test.expected {
+		t.Fatalf("expected: %s, got: %s", test.expected, result)
+	}
+}
+
+func TestGetFileNameWithError(t *testing.T) {
+	test := struct {
+		nonFlagArgs []string
+		input       string
+		shouldError bool
+	}{
+		nonFlagArgs: []string{},
+		input:       "",
+		shouldError: true,
+	}
+
+	reader := bufio.NewReader(bytes.NewBufferString(test.input))
+	_, err := GetFileName(test.nonFlagArgs, reader)
+
+	if (err == nil) == test.shouldError {
+		t.Fatalf("expected error: %v, got: %v", test.shouldError, err)
 	}
 }

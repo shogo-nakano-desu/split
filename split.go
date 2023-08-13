@@ -41,16 +41,17 @@ func SplitByLinesMultithread(file *os.File, lineCount int, baseFileName string, 
 	defer cancel()
 
 	for i, chunk := range chunks {
-		sem <- struct{}{}
 		wg.Add(1)
 
 		go func(ctx context.Context, idx int, lines []string) {
 			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
 			select {
 			case <-ctx.Done():
 				return
 			default:
-
 				content := strings.Join(lines, "\n")
 				if len(strs) <= idx {
 					errChan <- fmt.Errorf("error: too many files")
@@ -64,16 +65,18 @@ func SplitByLinesMultithread(file *os.File, lineCount int, baseFileName string, 
 					return
 				}
 			}
-			<-sem
 		}(ctx, i, chunk)
 	}
 
-	wg.Wait()
-	close(errChan)
+	go func() {
+		wg.Wait()
+		close(errChan)
+	}()
 
-	err = <-errChan
-	if err != nil {
-		return err
+	for err := range errChan {
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -86,7 +89,6 @@ func SplitByFileCountsMultithread(file *os.File, fileCount int, baseFileName str
 		return err
 	}
 	totalSize := fileInfo.Size()
-
 	bytesPerChunk := totalSize / int64(fileCount)
 	if bytesPerChunk < 1 {
 		return fmt.Errorf("error: can't split into more than %v files", totalSize)
@@ -139,37 +141,6 @@ func SplitByFileCountsMultithread(file *os.File, fileCount int, baseFileName str
 		return err
 	}
 
-	return nil
-}
-
-// SplitByBytes is a function that splits a file by the number of bytes.
-func SplitByBytes(file *os.File, byteSize int, baseFileName string, suffixLen int) error {
-	buffer := make([]byte, byteSize)
-	strs, err := GenerateStrings(suffixLen, "", 0)
-	if err != nil {
-		return err
-	}
-	fileIdx := 0
-
-	for {
-		n, err := file.Read(buffer)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return fmt.Errorf("error: reading file: %v", err)
-		}
-
-		if len(strs) <= fileIdx {
-			return fmt.Errorf("error: too many files")
-		}
-
-		err = writeToFile(string(buffer[:n]), baseFileName, strs[fileIdx])
-		if err != nil {
-			return err
-		}
-		fileIdx++
-	}
 	return nil
 }
 
