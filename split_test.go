@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"crypto/rand"
 	"fmt"
 	"math/big"
@@ -14,7 +13,7 @@ import (
 
 // Helper functions
 
-const BIG_INT = 9223372036854775807
+const bigInt = 9223372036854775807
 
 func createTmpFile(content string) *os.File {
 	tmpfile, _ := os.CreateTemp("", "example_tmp")
@@ -41,14 +40,6 @@ func fileNamesWithPattern(pattern string) ([]string, error) {
 	return matches, nil
 }
 
-func generateLargeText(size int) string {
-	var buffer bytes.Buffer
-	for i := 0; i < size; i++ {
-		buffer.WriteString("abcdefghijklmnopqrstuvwxyz\n")
-	}
-	return buffer.String()
-}
-
 func TestSplitByLinesMultithread(t *testing.T) {
 	tmpfile := createTmpFile(
 		`first line
@@ -59,7 +50,7 @@ func TestSplitByLinesMultithread(t *testing.T) {
 		sixth line`,
 	)
 
-	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(BIG_INT))
+	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(bigInt))
 
 	defer func() {
 		_ = os.Remove(tmpfile.Name())
@@ -107,7 +98,7 @@ func TestSplitByLinesMultithreadTooLargeFile(t *testing.T) {
 		`,
 	)
 
-	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(BIG_INT))
+	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(bigInt))
 	defer func() {
 		_ = os.Remove(tmpfile.Name())
 		removeFilesWithPattern(baseFileName.String() + "*")
@@ -131,7 +122,7 @@ func TestSplitByFileCounts(t *testing.T) {
 		sixth line`,
 	)
 
-	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(BIG_INT))
+	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(bigInt))
 
 	defer func() {
 		_ = os.Remove(tmpfile.Name())
@@ -179,7 +170,7 @@ func TestSplitByFileCountsTooLargeFile(t *testing.T) {
 		`,
 	)
 
-	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(BIG_INT))
+	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(bigInt))
 
 	defer func() {
 		_ = os.Remove(tmpfile.Name())
@@ -204,7 +195,7 @@ func TestSplitByFileCountsIntoTooManyFiles(t *testing.T) {
 		sixth line`,
 	)
 
-	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(BIG_INT))
+	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(bigInt))
 
 	defer func() {
 		_ = os.Remove(tmpfile.Name())
@@ -229,7 +220,7 @@ func TestSplitByBytesMultithread(t *testing.T) {
 		sixth line`,
 	)
 
-	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(BIG_INT))
+	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(bigInt))
 
 	defer func() {
 		_ = os.Remove(tmpfile.Name())
@@ -277,7 +268,7 @@ func TestSplitByBytesMultithreadTooLargeFile(t *testing.T) {
 		twenty-seventh line
 		`,
 	)
-	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(BIG_INT))
+	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(bigInt))
 	defer func() {
 		_ = os.Remove(tmpfile.Name())
 		removeFilesWithPattern(baseFileName.String() + "*")
