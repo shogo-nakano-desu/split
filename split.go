@@ -123,37 +123,6 @@ func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffix
 	return nil
 }
 
-// SplitByBytes is a function that splits a file by the number of bytes.
-func SplitByBytes(file *os.File, byteSize int, baseFileName string, suffixLen int) error {
-	buffer := make([]byte, byteSize)
-	strs, err := GenerateStrings(suffixLen, "", 0)
-	if err != nil {
-		return err
-	}
-	fileIdx := 0
-
-	for {
-		n, err := file.Read(buffer)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return fmt.Errorf("error: reading file: %v", err)
-		}
-
-		if len(strs) <= fileIdx {
-			return fmt.Errorf("error: too many files")
-		}
-
-		err = writeToFile(string(buffer[:n]), baseFileName, strs[fileIdx])
-		if err != nil {
-			return err
-		}
-		fileIdx++
-	}
-	return nil
-}
-
 // SplitByBytesMultithread is a function that splits a file by the number of bytes using goroutines.
 func SplitByBytesMultithread(file *os.File, byteSize int, baseFileName string, suffixLen int) error {
 	buffer := make([]byte, byteSize)

@@ -219,7 +219,7 @@ func TestSplitByFileCountsIntoTooManyFiles(t *testing.T) {
 	}
 }
 
-func TestSplitByBytes(t *testing.T) {
+func TestSplitByBytesMultithread(t *testing.T) {
 	tmpfile := createTmpFile(
 		`first line
 		second line
@@ -236,7 +236,7 @@ func TestSplitByBytes(t *testing.T) {
 		removeFilesWithPattern(baseFileName.String() + "*")
 	}()
 
-	_ = SplitByBytes(tmpfile, 2, baseFileName.String(), 2)
+	_ = SplitByBytesMultithread(tmpfile, 2, baseFileName.String(), 2)
 
 	res, _ := fileNamesWithPattern(baseFileName.String() + "*")
 	resLen := len(res)
@@ -246,7 +246,7 @@ func TestSplitByBytes(t *testing.T) {
 	}
 }
 
-func TestSplitByBytesTooLargeFile(t *testing.T) {
+func TestSplitByBytesMultithreadTooLargeFile(t *testing.T) {
 	tmpfile := createTmpFile(
 		`first line
 		second line
@@ -283,7 +283,7 @@ func TestSplitByBytesTooLargeFile(t *testing.T) {
 		removeFilesWithPattern(baseFileName.String() + "*")
 	}()
 
-	err := SplitByBytes(tmpfile, 1, baseFileName.String(), 1)
+	err := SplitByBytesMultithread(tmpfile, 1, baseFileName.String(), 1)
 
 	expected := fmt.Errorf("error: too many files")
 	if err.Error() != expected.Error() {
