@@ -2,21 +2,30 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
 	"fmt"
+	"math/big"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 )
 
-func createTempFile(content string) *os.File {
+// Helper functions
+
+const BIG_INT = 9223372036854775807
+
+func createTmpFile(content string) *os.File {
 	tmpfile, _ := os.CreateTemp("", "example_tmp")
 	_, _ = tmpfile.WriteString(content)
-	_, _ = tmpfile.Seek(0, 0) // reset the offset for reading
+	_, _ = tmpfile.Seek(0, 0)
 	return tmpfile
 }
 
 func removeFilesWithPattern(pattern string) {
+	// Need to wait for the file to be created.
+	time.Sleep(200 * time.Millisecond)
 	matches, _ := filepath.Glob(pattern)
 	for _, match := range matches {
 		_ = os.Remove(match)
@@ -41,7 +50,7 @@ func generateLargeText(size int) string {
 }
 
 func TestSplitByLinesMultithread(t *testing.T) {
-	tmpfile := createTempFile(
+	tmpfile := createTmpFile(
 		`first line
 		second line
 		third line
@@ -50,22 +59,24 @@ func TestSplitByLinesMultithread(t *testing.T) {
 		sixth line`,
 	)
 
+	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(BIG_INT))
+
 	defer func() {
 		_ = os.Remove(tmpfile.Name())
-		removeFilesWithPattern("testing_file*")
+		removeFilesWithPattern(baseFileName.String() + "*")
 	}()
 
-	_ = SplitByLinesMultithread(tmpfile, 2, "testing_file", 2)
+	_ = SplitByLinesMultithread(tmpfile, 2, baseFileName.String(), 2)
 
-	res, _ := fileNamesWithPattern("testing_file*")
-	expected := []string{"testing_fileaa", "testing_fileab", "testing_fileac"}
+	res, _ := fileNamesWithPattern(baseFileName.String() + "*")
+	expected := []string{baseFileName.String() + "aa", baseFileName.String() + "ab", baseFileName.String() + "ac"}
 	if !reflect.DeepEqual(res, expected) {
 		t.Errorf("expected %v, got %v", expected, res)
 	}
 }
 
 func TestSplitByLinesMultithreadTooLargeFile(t *testing.T) {
-	tmpfile := createTempFile(
+	tmpfile := createTmpFile(
 		`first line
 		second line
 		third line
@@ -96,12 +107,13 @@ func TestSplitByLinesMultithreadTooLargeFile(t *testing.T) {
 		`,
 	)
 
+	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(BIG_INT))
 	defer func() {
 		_ = os.Remove(tmpfile.Name())
-		removeFilesWithPattern("testing_file*")
+		removeFilesWithPattern(baseFileName.String() + "*")
 	}()
 
-	err := SplitByLinesMultithread(tmpfile, 1, "testing_file", 1)
+	err := SplitByLinesMultithread(tmpfile, 1, baseFileName.String(), 1)
 
 	expected := fmt.Errorf("error: too many files")
 	if err.Error() != expected.Error() {
@@ -110,7 +122,7 @@ func TestSplitByLinesMultithreadTooLargeFile(t *testing.T) {
 }
 
 func TestSplitByFileCounts(t *testing.T) {
-	tmpfile := createTempFile(
+	tmpfile := createTmpFile(
 		`first line
 		second line
 		third line
@@ -119,22 +131,24 @@ func TestSplitByFileCounts(t *testing.T) {
 		sixth line`,
 	)
 
+	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(BIG_INT))
+
 	defer func() {
 		_ = os.Remove(tmpfile.Name())
-		removeFilesWithPattern("testing_file*")
+		removeFilesWithPattern(baseFileName.String() + "*")
 	}()
 
-	_ = SplitByFileCounts(tmpfile, 2, "testing_file", 2)
+	_ = SplitByFileCounts(tmpfile, 2, baseFileName.String(), 2)
 
-	res, _ := fileNamesWithPattern("testing_file*")
-	expected := []string{"testing_fileaa", "testing_fileab"}
+	res, _ := fileNamesWithPattern(baseFileName.String() + "*")
+	expected := []string{baseFileName.String() + "aa", baseFileName.String() + "ab"}
 	if !reflect.DeepEqual(res, expected) {
 		t.Errorf("expected %v, got %v", expected, res)
 	}
 }
 
 func TestSplitByFileCountsTooLargeFile(t *testing.T) {
-	tmpfile := createTempFile(
+	tmpfile := createTmpFile(
 		`first line
 		second line
 		third line
@@ -165,12 +179,14 @@ func TestSplitByFileCountsTooLargeFile(t *testing.T) {
 		`,
 	)
 
+	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(BIG_INT))
+
 	defer func() {
 		_ = os.Remove(tmpfile.Name())
-		removeFilesWithPattern("testing_file*")
+		removeFilesWithPattern(baseFileName.String() + "*")
 	}()
 
-	err := SplitByFileCounts(tmpfile, 27, "testing_file", 1)
+	err := SplitByFileCounts(tmpfile, 27, baseFileName.String(), 1)
 
 	expected := fmt.Errorf("error: too many files")
 	if err.Error() != expected.Error() {
@@ -179,7 +195,7 @@ func TestSplitByFileCountsTooLargeFile(t *testing.T) {
 }
 
 func TestSplitByFileCountsIntoTooManyFiles(t *testing.T) {
-	tmpfile := createTempFile(
+	tmpfile := createTmpFile(
 		`first line
 		second line
 		third line
@@ -188,21 +204,23 @@ func TestSplitByFileCountsIntoTooManyFiles(t *testing.T) {
 		sixth line`,
 	)
 
+	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(BIG_INT))
+
 	defer func() {
 		_ = os.Remove(tmpfile.Name())
-		removeFilesWithPattern("testing_file*")
+		removeFilesWithPattern(baseFileName.String() + "*")
 	}()
 
-	err := SplitByFileCounts(tmpfile, 1000, "testing_file", 2)
+	err := SplitByFileCounts(tmpfile, 1000, baseFileName.String(), 2)
 
-	expected := fmt.Errorf("error: can't split into more than 1000 files")
+	expected := fmt.Errorf("error: can't split into more than 77 files")
 	if err.Error() != expected.Error() {
 		t.Errorf("expected %v, got %v", expected, err)
 	}
 }
 
 func TestSplitByBytesMultithread(t *testing.T) {
-	tmpfile := createTempFile(
+	tmpfile := createTmpFile(
 		`first line
 		second line
 		third line
@@ -211,14 +229,16 @@ func TestSplitByBytesMultithread(t *testing.T) {
 		sixth line`,
 	)
 
+	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(BIG_INT))
+
 	defer func() {
 		_ = os.Remove(tmpfile.Name())
-		removeFilesWithPattern("testing_file*")
+		removeFilesWithPattern(baseFileName.String() + "*")
 	}()
 
-	_ = SplitByBytesMultithread(tmpfile, 2, "testing_file", 2)
+	_ = SplitByBytesMultithread(tmpfile, 2, baseFileName.String(), 2)
 
-	res, _ := fileNamesWithPattern("testing_file*")
+	res, _ := fileNamesWithPattern(baseFileName.String() + "*")
 	resLen := len(res)
 	expected := 39
 	if !reflect.DeepEqual(resLen, expected) {
@@ -227,7 +247,7 @@ func TestSplitByBytesMultithread(t *testing.T) {
 }
 
 func TestSplitByBytesMultithreadTooLargeFile(t *testing.T) {
-	tmpfile := createTempFile(
+	tmpfile := createTmpFile(
 		`first line
 		second line
 		third line
@@ -257,13 +277,13 @@ func TestSplitByBytesMultithreadTooLargeFile(t *testing.T) {
 		twenty-seventh line
 		`,
 	)
-
+	baseFileName, _ := rand.Int(rand.Reader, big.NewInt(BIG_INT))
 	defer func() {
 		_ = os.Remove(tmpfile.Name())
-		removeFilesWithPattern("testing_file*")
+		removeFilesWithPattern(baseFileName.String() + "*")
 	}()
 
-	err := SplitByBytesMultithread(tmpfile, 1, "testing_file", 1)
+	err := SplitByBytesMultithread(tmpfile, 1, baseFileName.String(), 1)
 
 	expected := fmt.Errorf("error: too many files")
 	if err.Error() != expected.Error() {

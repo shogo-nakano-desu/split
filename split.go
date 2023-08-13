@@ -86,10 +86,9 @@ func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffix
 		return err
 	}
 	totalSize := fileInfo.Size()
-
 	bytesPerChunk := totalSize / int64(fileCount)
 	if bytesPerChunk < 1 {
-		return fmt.Errorf("error: can't split into more than %v files", fileCount)
+		return fmt.Errorf("error: can't split into more than %v files", totalSize)
 	}
 	remainingBytes := totalSize % int64(fileCount)
 
