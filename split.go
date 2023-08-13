@@ -123,69 +123,6 @@ func SplitByFileCounts(file *os.File, fileCount int, baseFileName string, suffix
 	return nil
 }
 
-// SplitByFileCountsMultithread is a function that splits a file to the number of files using goroutines.
-func SplitByFileCountsMultithread(file *os.File, fileCount int, baseFileName string, suffixLen int) error {
-	fileInfo, err := file.Stat()
-	if err != nil {
-		return err
-	}
-	totalSize := fileInfo.Size()
-
-	bytesPerChunk := totalSize / int64(fileCount)
-	if bytesPerChunk < 1 {
-		return fmt.Errorf("error: can't split into more than %v files", totalSize)
-	}
-	remainingBytes := totalSize % int64(fileCount)
-
-	strs, err := GenerateStrings(suffixLen, "", 0)
-	if err != nil {
-		return err
-	}
-
-	errChan := make(chan error, fileCount)
-	sem := make(chan struct{}, 10)
-
-	for i := 0; i < fileCount; i++ {
-		if len(strs) <= i {
-			return fmt.Errorf("error: too many files")
-		}
-		var currentChunkSize int64
-		if i == fileCount-1 {
-			currentChunkSize = bytesPerChunk + remainingBytes
-		} else {
-			currentChunkSize = bytesPerChunk
-		}
-
-		buffer := make([]byte, currentChunkSize)
-		_, err := file.Read(buffer)
-		if err != nil && err != io.EOF {
-			return err
-		}
-
-		go func(data []byte, filenameSuffix string) {
-			sem <- struct{}{} // セマフォに値を送信して、スロットを取得
-			err := writeToFile(string(data), baseFileName, filenameSuffix)
-			errChan <- err
-			<-sem // セマフォから値を取り出して、スロットを解放
-		}(buffer, strs[i])
-	}
-
-	for i := 0; i < fileCount; i++ {
-		if err := <-errChan; err != nil {
-			return err
-		}
-	}
-
-	close(errChan)
-
-	err = <-errChan
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // SplitByBytes is a function that splits a file by the number of bytes.
 func SplitByBytes(file *os.File, byteSize int, baseFileName string, suffixLen int) error {
 	buffer := make([]byte, byteSize)
