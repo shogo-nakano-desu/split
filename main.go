@@ -60,7 +60,7 @@ func main() {
 			os.Exit(1)
 		}
 	} else if fileCount > 0 {
-		err := SplitByFileCounts(file, fileCount, prefixFileName, suffixLen)
+		err := SplitByFileCountsMultithread(file, fileCount, prefixFileName, suffixLen)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			os.Exit(1)
