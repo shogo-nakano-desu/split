@@ -2,13 +2,11 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"os"
 )
-
-// TODOs
-// ・ファイル名がなかった場合には、追加でファイル名が与えられるのを待つようにする。
 
 func main() {
 	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
@@ -27,12 +25,12 @@ func main() {
 	}
 
 	nonFlagArgs := fs.Args()
-	if len(nonFlagArgs) <= 0 {
-		// TODO: ファイル名がなかった場合には、追加でファイル名が与えられるのを待つようにする。
-		fmt.Println("Please provide a file to split.")
+	reader := bufio.NewReader(os.Stdin)
+	splitFileName, err := GetFileName(nonFlagArgs, reader)
+	if err != nil {
+		fmt.Printf("Error getting the file name: %v\n", err)
 		os.Exit(1)
 	}
-	splitFileName := nonFlagArgs[0]
 
 	prefixFileName := ""
 	if len(nonFlagArgs) >= 2 {

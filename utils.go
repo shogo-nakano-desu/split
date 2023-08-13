@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"os"
@@ -149,4 +150,28 @@ func ParseArgs(fs *flag.FlagSet) (ParseArgsResult, error) {
 		SuffixLen: suffixLen,
 		Args:      args,
 	}, nil
+}
+
+func GetFileName(nonFlagArgs []string, reader *bufio.Reader) (string, error) {
+	if len(nonFlagArgs) == 0 {
+		fmt.Println("File name not provided. Please enter the file name:")
+		var input string
+		for {
+			char, _, err := reader.ReadRune()
+			if err != nil {
+				return "", err
+			}
+			if char == '\n' {
+				if input == "" {
+					continue // Skip empty lines
+				}
+				break
+			}
+			input += string(char)
+		}
+
+		return strings.TrimSpace(input), nil
+	}
+
+	return nonFlagArgs[0], nil
 }
